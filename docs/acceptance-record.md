@@ -16,14 +16,14 @@
 | 4 | Runtime Error 可通过 CLI 查看 | 可查看 | `mini logs`(含 --follow)已验;invoke 失败带错误码返回;管理面板红字日志为 GUI 侧补充 | ✅ 达标 | smoke S1/S5;手动清单 §一 |
 | 5 | App Crash 不影响 Host | 不影响 | 外部强杀 App utilityProcess:Host 存活、状态转 crashed、终结事件恰好一条 | ✅ 达标 | smoke S2 |
 | 6 | 外部 Python Helper 完整 start/stop/log | 完整生命周期 | helper 进程树 start/stop/log 已自动化验证(node helper,含超时强杀与清理);Python helper(连连看)在真实游戏上验证过 | ✅ 达标 | smoke S4;apps/lianliankan/README |
-| 7 | Window / Floating / Overlay 全部可用 | 三种模式 | window ✅(hello/文件整理器等);floating ✅(连连看);**overlay 待真机确认** | ⚠ 部分已验 | 手动清单 §四(overlay 项) |
+| 7 | Window / Floating / Overlay 全部可用 | 三种模式 | window ✅(hello/文件整理器等);floating ✅(连连看);overlay ✅(2026-09-28 用户真机确认:挂屏、置顶层级、失焦行为) | ✅ 达标 | 手动清单 §四(overlay 项) |
 | 8 | Global Hotkey 可注册 | 可注册 | Host `Ctrl+Shift+M` + manifest 热键(连连看 `Ctrl+Shift+K`)均实测;冲突回退与释放有自动化覆盖 | ✅ 达标 | smoke 日志;手动清单 §一 |
 | 9 | Screen / Mouse 可直接调用 | 可调用 | 连连看全流程(选区→识别→求解→点击)在真实游戏验证(2026-09-26/27) | ✅ 达标 | apps/lianliankan/README |
 | 10 | **最高优先级:Coding Agent 除 OS 权限外无需操作 Host GUI** | 成立 | 本项目全部开发/验证工作(冒烟、计时、文件整理器端到端、UI 迁移验收)均由 agent 经 CLI + 文件完成,未操作 Host GUI | ✅ 达标 | 本记录全过程 |
 
 ## 汇总
 
-- **9/10 达标,1 项部分已验**:overlay 窗口模式需要用户在真机确认(手动清单 §四,约 10 分钟)。
+- **10/10 达标(2026-09-28 P0 收口)**:overlay 已由用户真机确认,§21 十条指标全部闭环。
 - 手动清单([docs/manual-test-checklist.md](manual-test-checklist.md))覆盖其余 GUI 项(文件选择器、多屏 DPI、托盘退出核验等),不属于 §21 硬指标。
 
 ## 回退演练(批次 R3)
@@ -35,6 +35,9 @@
 
 ## 未验证项清单(不隐藏)
 
-1. overlay 窗口模式真机行为(§21 #7 的残余)。
-2. 旧版本二进制读取新版本数据(见上表)。
-3. Windows 10 真机(当前记录仅 Windows 11 26200;PRD 目标平台含 Win10)。
+1. 旧版本二进制读取新版本数据(见上表)。缓解:自 v0.1.0-mvp 起 tag + data 快照纪律生效,后续升级可实际演练。
+2. Windows 10 真机(当前记录仅 Windows 11 26200;PRD 目标平台含 Win10)。已转入 docs/post-mvp-plan.md 横切稳定性项。
+
+## P0 收口(2026-09-28)
+
+用户完成手动验收日:副屏两项复测(连连看选区/点击、screen-inspector 两屏截图)、热键录制式回滚、文件整理器去向与通知、overlay 真机确认(挂屏/置顶/失焦)全部通过 → §21 十条全部达标。文件整理器同时收到设计层面反馈(「说是归档,但没说如何归档、精细化配置等」),功能验收不受影响,专项重设计立项至 docs/post-mvp-plan.md P3。发布快照:git tag v0.1.0-mvp + data 目录快照(D:/Project/loom-mvp-backups/data-v0.1.0-mvp.zip)。
