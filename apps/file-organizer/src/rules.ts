@@ -24,6 +24,8 @@ export interface Plan {
 
 export interface ExecuteResult {
   moved: number;
+  /** 实际移动去向,按执行顺序;UI 与通知用它们说明"东西去哪了"。 */
+  movedList: { fileName: string; destination: string }[];
   skipped: { fileName: string; reason: string }[];
   failed: { fileName: string; error: string }[];
   durationMs: number;
@@ -108,6 +110,7 @@ export async function applyPlan(
   const started = Date.now();
   const skipped: ExecuteResult["skipped"] = [];
   const failed: ExecuteResult["failed"] = [];
+  const movedList: ExecuteResult["movedList"] = [];
   let moved = 0;
   for (const item of plan.items) {
     // Re-check at execution time: the plan may be stale by the time it runs.
@@ -116,10 +119,11 @@ export async function applyPlan(
     if (!checks.sameVolume(item.source, item.destination)) { skipped.push({ fileName: item.fileName, reason: "cross-volume move refused" }); continue; }
     try {
       await move(item.source, item.destination);
+      movedList.push({ fileName: item.fileName, destination: item.destination });
       moved++;
     } catch (error) {
       failed.push({ fileName: item.fileName, error: error instanceof Error ? error.message : String(error) });
     }
   }
-  return { moved, skipped, failed, durationMs: Date.now() - started };
+  return { moved, movedList, skipped, failed, durationMs: Date.now() - started };
 }

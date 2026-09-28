@@ -59,6 +59,13 @@ function ensureShellHtml(app: AppEntry): string {
   return file;
 }
 
+// 闲置自动停止的活跃度钩子:窗口 show/focus 时回调(manager 启动时注册),
+// windows.ts 不反向 import manager,避免循环依赖。
+let activityHook: (appId: string) => void = () => {};
+export function setWindowActivityHook(fn: (appId: string) => void): void {
+  activityHook = fn;
+}
+
 function trackWindow(appId: string, windowId: string, win: BrowserWindow): void {
   let m = windowsByApp.get(appId);
   if (!m) {
@@ -86,7 +93,11 @@ function trackWindow(appId: string, windowId: string, win: BrowserWindow): void 
       `app-window console (app=${appId}): ${details.message} (${details.sourceId}:${details.lineNumber})`,
     );
   });
-  win.on("show", () => logHost("info", `window shown (app=${appId}, id=${windowId})`));
+  win.on("show", () => {
+    logHost("info", `window shown (app=${appId}, id=${windowId})`);
+    activityHook(appId);
+  });
+  win.on("focus", () => activityHook(appId));
 }
 
 export function createAppWindow(app: AppEntry): string {

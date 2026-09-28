@@ -8,6 +8,7 @@ import * as manager from "./runtime/manager";
 import * as state from "./state";
 import * as history from "./history";
 import { setEnabledAndReconcile } from "./appManagement";
+import * as windows from "./services/windows";
 import { patchHostSettings } from "./settingsCommit";
 
 /**
@@ -52,6 +53,7 @@ function appToApi(e: registry.RegistryEntry) {
     return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [], commands: [], hotkeys: [], manifestIssues: [] };
   }
   const run = manager.status(e.id);
+  const runInfo = manager.listStatuses()[e.id];
   return {
     id: e.id,
     name: e.name,
@@ -63,7 +65,8 @@ function appToApi(e: registry.RegistryEntry) {
     path: e.path,
     uiType: e.manifest.ui.type,
     status: run,
-    startedAt: run === "running" ? manager.listStatuses()[e.id]?.startedAt : undefined,
+    startedAt: run === "running" ? runInfo?.startedAt : undefined,
+    pid: run === "running" ? runInfo?.pid : undefined,
     manifestIssues: e.manifestIssues,
     commands: e.manifest.commands,
     hotkeys: e.hotkeys,
@@ -136,8 +139,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const found = registry.list().find((e) => e.id === id)!;
     if (registry.isBroken(found)) return json(res, 409, { ok: false, code: "BROKEN_MANIFEST", error: found.error });
     if (!found.enabled && ["start", "reload", "invoke"].includes(action)) return json(res, 409, { ok: false, code: "APP_DISABLED", error: `App ${id} 已禁用` });
-    if (!["start", "stop", "reload", "enable", "disable", "favorite", "unfavorite", "invoke"].includes(action)) return json(res, 400, { ok: false, code: "INVALID_ARGUMENT", error: `未知动作: ${action}` });
+    if (!["start", "stop", "reload", "focus", "enable", "disable", "favorite", "unfavorite", "invoke"].includes(action)) return json(res, 400, { ok: false, code: "INVALID_ARGUMENT", error: `未知动作: ${action}` });
     switch (action) {
+      case "focus": {
+        if (manager.status(id) !== "running") return json(res, 409, { ok: false, code: "INVALID_ARGUMENT", error: `App ${id} 未在运行,无需唤起` });
+        const focused = windows.focusApp(id);
+        if (!focused && found.manifest.ui.type !== "none") windows.createAppWindow(found);
+        else if (!focused) return json(res, 409, { ok: false, code: "INVALID_ARGUMENT", error: `App ${id} 没有可唤起的窗口` });
+        return json(res, 200, { ok: true, data: appToApi(registry.get(id)!) });
+      }
       case "start": {
         await manager.start(id);
         return json(res, 200, { ok: true, data: appToApi(registry.get(id)!) });

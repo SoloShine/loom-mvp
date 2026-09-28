@@ -23,16 +23,32 @@ function physicalSize(display: Electron.Display): { width: number; height: numbe
   };
 }
 
+// Windows 的全局坐标系(虚拟屏幕)按主屏 DPI 缩放:每个显示器的 bounds 原点
+// 都要 ×主屏 scaleFactor 才是物理像素;各屏自己的宽高则 ×自己的 scaleFactor。
+// 之前原点误用各屏自己的缩放 —— 副屏(2560 DIP,自身 scale 1.0,主屏 1.5)被
+// 算到物理 2560 而真实位置是 3840,与主屏物理区间重叠,导致副屏截图偏移、
+// 选区定位错位、鼠标点击不准。
+function physicalOrigin(display: Electron.Display): { x: number; y: number } {
+  const primaryScale = electronScreen.getPrimaryDisplay().scaleFactor;
+  return {
+    x: Math.round(display.bounds.x * primaryScale),
+    y: Math.round(display.bounds.y * primaryScale),
+  };
+}
+
+function physicalRect(display: Electron.Display): { x: number; y: number; width: number; height: number } {
+  const origin = physicalOrigin(display);
+  const size = physicalSize(display);
+  return { x: origin.x, y: origin.y, width: size.width, height: size.height };
+}
+
 function displayForRect(rect: Rect): Electron.Display {
   const displays = electronScreen.getAllDisplays();
   return (
-    displays.find(
-      (d) =>
-        rect.x >= d.bounds.x * d.scaleFactor &&
-        rect.x < (d.bounds.x + d.bounds.width) * d.scaleFactor &&
-        rect.y >= d.bounds.y * d.scaleFactor &&
-        rect.y < (d.bounds.y + d.bounds.height) * d.scaleFactor,
-    ) ?? electronScreen.getPrimaryDisplay()
+    displays.find((d) => {
+      const p = physicalRect(d);
+      return rect.x >= p.x && rect.x < p.x + p.width && rect.y >= p.y && rect.y < p.y + p.height;
+    }) ?? electronScreen.getPrimaryDisplay()
   );
 }
 
@@ -72,10 +88,10 @@ export const screenApi = {
   async captureRegion(rect: Rect): Promise<{ dataUrl: string; width: number; height: number }> {
     const display = displayForRect(rect);
     const img = await captureDisplay(display);
-    const sf = display.scaleFactor;
+    const origin = physicalOrigin(display);
     const rel = img.crop({
-      x: Math.round(rect.x - display.bounds.x * sf),
-      y: Math.round(rect.y - display.bounds.y * sf),
+      x: Math.round(rect.x - origin.x),
+      y: Math.round(rect.y - origin.y),
       width: Math.max(1, Math.round(rect.width)),
       height: Math.max(1, Math.round(rect.height)),
     });
@@ -86,12 +102,7 @@ export const screenApi = {
   getMonitors() {
     return electronScreen.getAllDisplays().map((d) => ({
       id: d.id,
-      bounds: {
-        x: d.bounds.x * d.scaleFactor,
-        y: d.bounds.y * d.scaleFactor,
-        width: Math.round(d.bounds.width * d.scaleFactor),
-        height: Math.round(d.bounds.height * d.scaleFactor),
-      },
+      bounds: physicalRect(d),
       scaleFactor: d.scaleFactor,
       isPrimary: d.id === electronScreen.getPrimaryDisplay().id,
     }));
@@ -148,11 +159,8 @@ async function runSnipSelection(): Promise<Rect | null> {
         }
         const file = path.join(paths.data, `snip-screen-${i}.png`);
         await fs.promises.writeFile(file, img.toPNG());
-        screens.push({
-          path: file,
-          x: Math.round(d.bounds.x * d.scaleFactor),
-          y: Math.round(d.bounds.y * d.scaleFactor),
-        });
+        const origin = physicalOrigin(d);
+        screens.push({ path: file, x: origin.x, y: origin.y });
       }),
     );
 

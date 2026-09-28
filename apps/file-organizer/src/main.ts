@@ -84,9 +84,11 @@ async function execute() {
     `file-organizer moved ${result.moved}, skipped ${result.skipped.length}, failed ${result.failed.length} in ${directory} (${result.durationMs}ms)`,
   );
   if (result.moved > 0) {
+    const targets = [...new Set(result.movedList.map((m) => path.dirname(m.destination)))];
+    const summary = targets.length <= 3 ? targets.join("、") : `${targets.length} 个分类文件夹`;
     await host.notification.show({
       title: "File Organizer",
-      body: `Moved ${result.moved} file(s), skipped ${result.skipped.length + result.failed.length}`,
+      body: `已移动 ${result.moved} 个文件到 ${summary}${result.skipped.length + result.failed.length ? `,跳过 ${result.skipped.length + result.failed.length} 个` : ""}`,
     }).catch(() => false);
   }
   await scan();

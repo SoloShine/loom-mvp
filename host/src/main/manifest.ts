@@ -11,12 +11,19 @@ export interface UiDef {
   height?: number;
 }
 
+export interface LifecycleDef {
+  /** 闲置自动停止(分钟)。运行中 App 超过该时长无 invoke 且无窗口 show/focus
+   *  即自动 stop;0/缺省 = 关闭。用于避免面板类 App 无意义常驻。 */
+  idleStopMinutes?: number;
+}
+
 export interface Manifest {
   id: string;
   name: string;
   version: string;
   entry: string;
   ui: UiDef;
+  lifecycle?: LifecycleDef;
   commands: CommandDef[];
   hotkeys: Record<string, string>;
   permissions: string[];
@@ -62,6 +69,23 @@ export function parseManifest(text: string, dirName: string): ParsedManifest {
     errors.push(`ui.type 非法: ${raw.ui.type}(应为 none/window/floating/overlay)`);
   }
 
+  let lifecycle: LifecycleDef | undefined;
+  if (raw.lifecycle != null) {
+    if (typeof raw.lifecycle !== "object" || Array.isArray(raw.lifecycle)) {
+      errors.push("lifecycle 必须是映射");
+    } else {
+      lifecycle = {};
+      const idle = raw.lifecycle.idleStopMinutes;
+      if (idle !== undefined) {
+        if (!Number.isSafeInteger(idle) || idle < 0 || idle > 7 * 24 * 60) {
+          errors.push(`lifecycle.idleStopMinutes 非法: ${JSON.stringify(idle)}(0~10080 的整数,0=关闭)`);
+        } else if (idle > 0) {
+          lifecycle.idleStopMinutes = idle;
+        }
+      }
+    }
+  }
+
   const commands: CommandDef[] = [];
   if (raw.commands != null) {
     if (!Array.isArray(raw.commands)) errors.push("commands 必须是数组");
@@ -102,6 +126,7 @@ export function parseManifest(text: string, dirName: string): ParsedManifest {
       version: raw.version,
       entry: raw.entry,
       ui,
+      lifecycle,
       commands,
       hotkeys,
       permissions,

@@ -146,12 +146,11 @@ function launcherSender(sender: Electron.WebContents): boolean {
 export function initLauncher(): void {
   ipcMain.handle("mini:launcher:getApps", (e) => {
     if (!launcherSender(e.sender)) throw new Error("FORBIDDEN: Launcher sender");
-    return registry.list().map((entry) => {
-      if (registry.isBroken(entry)) {
-        return { id: entry.id, name: entry.id, status: "broken", enabled: false, favorite: false, error: entry.error, commands: [] };
-      }
-      return { id: entry.id, name: entry.name, version: entry.version, status: manager.status(entry.id), enabled: entry.enabled, favorite: entry.favorite, lastUsedAt: entry.lastUsedAt, commands: entry.manifest.commands };
-    });
+    // 面板只显示可启动项:禁用/损坏的 App 不出现(恢复入口在托盘与管理中心)
+    return registry.list()
+      .filter((entry): entry is Exclude<registry.RegistryEntry, registry.BrokenAppEntry> => !registry.isBroken(entry))
+      .filter((entry) => entry.enabled)
+      .map((entry) => ({ id: entry.id, name: entry.name, version: entry.version, status: manager.status(entry.id), enabled: entry.enabled, favorite: entry.favorite, lastUsedAt: entry.lastUsedAt, commands: entry.manifest.commands }));
   });
   ipcMain.handle("mini:launcher:startApp", (e, id: string) => {
     if (!launcherSender(e.sender)) throw new Error("FORBIDDEN: Launcher sender");

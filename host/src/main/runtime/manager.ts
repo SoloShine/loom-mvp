@@ -99,10 +99,10 @@ export function status(id: string): RunStatus {
   return stateOf(id).status;
 }
 
-export function listStatuses(): Record<string, { status: RunStatus; startedAt?: number }> {
-  const out: Record<string, { status: RunStatus; startedAt?: number }> = {};
+export function listStatuses(): Record<string, { status: RunStatus; startedAt?: number; pid?: number }> {
+  const out: Record<string, { status: RunStatus; startedAt?: number; pid?: number }> = {};
   for (const [id, st] of runs) {
-    out[id] = { status: st.status, startedAt: st.startedAt };
+    out[id] = { status: st.status, startedAt: st.startedAt, pid: st.proc?.pid };
   }
   return out;
 }
@@ -253,6 +253,7 @@ export async function invoke(id: string, command: string, args?: unknown): Promi
   try {
     const result = await p;
     recordUse(id);
+    touchActivity(id);
     history.event({ appId: id, runId: st.runId, kind: "invoke", command, outcome: "success", durationMs: Date.now() - started });
     return result;
   } catch (e) {
@@ -272,6 +273,30 @@ export async function stopAll(): Promise<void> {
     if (st.status !== "stopped") await stop(id);
   }
 }
+
+// —— 闲置自动停止(manifest lifecycle.idleStopMinutes,缺省关闭)——————
+// 活跃 = invoke、启动成功、窗口 show/focus;超时走正常 stop(可被重新启动)。
+const lastActivity = new Map<string, number>();
+
+export function touchActivity(id: string): void {
+  if (runs.has(id)) lastActivity.set(id, Date.now());
+}
+windows.setWindowActivityHook(touchActivity);
+
+const IDLE_CHECK_INTERVAL_MS = 30_000;
+setInterval(() => {
+  for (const [id, st] of runs) {
+    if (st.status !== "running") continue;
+    const minutes = get(id)?.manifest.lifecycle?.idleStopMinutes ?? 0;
+    if (minutes <= 0) continue;
+    const last = lastActivity.get(id) ?? st.startedAt;
+    if (last && Date.now() - last >= minutes * 60_000) {
+      logApp(id, "info", `闲置超过 ${minutes} 分钟,自动停止(lifecycle.idleStopMinutes)`);
+      lastActivity.set(id, Date.now()); // 防止 stop 慢时下一轮重复触发
+      void stop(id).catch(() => { /* stop 失败已记日志 */ });
+    }
+  }
+}, IDLE_CHECK_INTERVAL_MS);
 
 // ---------------------------------------------------------------------------
 

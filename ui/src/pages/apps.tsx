@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Play, Square, RotateCw, Folder, Command, Star, X, History, ScrollText,
+  Play, Square, RotateCw, Folder, Command, Star, X, History, ScrollText, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -152,6 +152,9 @@ export function AppsPage({ query }: { query: string }) {
                 ) : (
                   <Button size="sm" disabled={busy || detail.status === "broken" || !detail.enabled} onClick={() => void doAction("start")}><Play />启动</Button>
                 )}
+                {(detail.status === "running" || detail.status === "starting") && detail.uiType !== "none" && (
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => void doAction("focus")}><ExternalLink />唤起</Button>
+                )}
                 <Button variant="outline" size="sm" disabled={busy || detail.status === "broken" || !detail.enabled} onClick={() => void doAction("reload")}><RotateCw />重载</Button>
                 <Button variant="ghostDestructive" size="sm" disabled={busy || detail.status === "broken"} onClick={() => void doAction(detail.enabled ? "disable" : "enable")}>
                   {detail.enabled ? "禁用" : "启用"}
@@ -181,6 +184,7 @@ export function AppsPage({ query }: { query: string }) {
                 </span>
               </Row>
               <Row label="UI 类型"><Badge variant="secondary">{detail.uiType ?? "none"}</Badge></Row>
+              {detail.pid && <Row label="进程 PID"><span className="font-mono text-xs">{detail.pid}</span></Row>}
               <Row label="使用次数">{detail.useCount ?? 0} 次</Row>
               <Row label="最近使用">{detail.lastUsedAt ?? "暂无"}</Row>
             </Card>

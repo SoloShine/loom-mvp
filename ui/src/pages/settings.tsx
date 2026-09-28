@@ -1,10 +1,34 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, Row } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/toast";
 import { bridge, errorMessage } from "@/lib/bridge";
 import type { HostSettings } from "@/types";
+
+/** 热键录制:聚焦后直接按下组合键(如 Ctrl+Shift+M),Esc 清空。 */
+function HotkeyInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <Input
+      readOnly
+      value={value}
+      placeholder="点击后按下组合键"
+      className="w-44 cursor-pointer text-right font-mono"
+      onKeyDown={(e) => {
+        e.preventDefault();
+        if (e.key === "Escape") { onChange(""); return; }
+        if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return; // 只按了修饰键,等待组合
+        const parts: string[] = [];
+        if (e.ctrlKey) parts.push("Ctrl");
+        if (e.altKey) parts.push("Alt");
+        if (e.shiftKey) parts.push("Shift");
+        if (e.metaKey) parts.push("Super");
+        parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+        onChange(parts.join("+"));
+      }}
+    />
+  );
+}
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<HostSettings | null>(null);
@@ -60,39 +84,33 @@ export function SettingsPage() {
               <div className="flex items-center justify-between gap-6 py-3 first:pt-0">
                 <div>
                   <div className="text-[13px] font-medium">Launcher 热键</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">打开命令面板的全局快捷键</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">点击右侧输入框后直接按下组合键,Esc 清空</div>
                 </div>
-                <Input value={hotkey} onChange={(e) => setHotkey(e.target.value)} className="w-44 text-right font-mono" />
+                <HotkeyInput value={hotkey} onChange={setHotkey} />
               </div>
               <div className="flex items-center justify-between gap-6 py-3">
                 <div>
                   <div className="text-[13px] font-medium">日志保留天数</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">超期的 App 日志文件会被清理(1~365)</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">超期的 App 日志文件会被清理,单位:天(1~365)</div>
                 </div>
-                <Input type="number" min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} className="w-28 text-right font-mono" />
+                <div className="flex items-center gap-2">
+                  <Input type="number" min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} className="w-24 text-right font-mono" />
+                  <span className="text-muted-foreground">天</span>
+                </div>
               </div>
               <div className="flex items-center justify-between gap-6 py-3 last:pb-0">
                 <div>
                   <div className="text-[13px] font-medium">每个 App 最大日志容量</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">单 App 日志超过该字节数触发轮转(≥1024)</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">单 App 日志超过该值触发轮转,单位:字节({Math.round(Number(bytes || 0) / 1024 / 1024 * 10) / 10} MB)</div>
                 </div>
-                <Input type="number" min={1024} value={bytes} onChange={(e) => setBytes(e.target.value)} className="w-36 text-right font-mono" />
+                <div className="flex items-center gap-2">
+                  <Input type="number" min={1024} value={bytes} onChange={(e) => setBytes(e.target.value)} className="w-28 text-right font-mono" />
+                  <span className="text-muted-foreground">字节</span>
+                </div>
               </div>
             </div>
           ) : (
             <div className="text-muted-foreground">正在加载设置…</div>
-          )}
-        </Card>
-
-        <Card title="当前生效值">
-          {settings ? (
-            <>
-              <Row label="热键">{settings.launcherHotkey}</Row>
-              <Row label="保留">{settings.logRetentionDays} 天</Row>
-              <Row label="容量">{settings.maxLogBytesPerApp} 字节</Row>
-            </>
-          ) : (
-            <div className="text-muted-foreground">—</div>
           )}
         </Card>
 

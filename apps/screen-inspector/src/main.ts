@@ -2,7 +2,8 @@ import { host, type Rect } from "@mini/sdk";
 let lastRect: Rect | null = null;
 function validRect(value: any): Rect {
   const { x, y, width, height } = value ?? {};
-  if (![x, y, width, height].every((n) => Number.isSafeInteger(n)) || width < 1 || height < 1 || width > 2048 || height > 2048) throw new Error("Invalid region (maximum 2048 x 2048)");
+  // 尺寸上限交给"必须完整落在某块显示器内"的校验(原生 4K 全屏也要能截)
+  if (![x, y, width, height].every((n) => Number.isSafeInteger(n)) || width < 1 || height < 1) throw new Error("Invalid region (positive integers required)");
   return { x, y, width, height };
 }
 async function monitors() {

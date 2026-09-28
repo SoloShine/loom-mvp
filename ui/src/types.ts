@@ -8,6 +8,7 @@ export interface AppInfo {
   enabled: boolean;
   favorite?: boolean;
   error?: string;
+  pid?: number;
   lastUsedAt?: string;
   useCount?: number;
   manifestIssues?: string[];

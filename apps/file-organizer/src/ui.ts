@@ -33,6 +33,11 @@ root.innerHTML = `
 <section>
   <div id="summary">No preview yet.</div>
   <div id="tableWrap"><table><thead><tr><th>File</th><th>Category</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <p id="hint" style="color:#78848f;font-size:12px;margin:8px 2px 0">仅列出目录顶层的普通文件;子目录与符号链接不会显示、也不会移动。</p>
+  <div id="movedWrap" style="display:none;margin-top:8px">
+    <div style="font-size:12px;color:#456;margin-bottom:4px">上次执行移动去向:</div>
+    <div id="movedList" style="max-height:160px;overflow:auto;border:1px solid #dde2e6;background:#fff;border-radius:6px;padding:6px 10px;font-size:12px"></div>
+  </div>
 </section>
 <p id="status" role="status"></p>`;
 
@@ -62,12 +67,27 @@ function render(msg: any) {
   else {
     let summary = `Total ${plan.counts.total} · to move ${plan.counts.move} · conflicts ${plan.counts.conflict}`;
     if (plan.truncated) summary += ` (first ${plan.items.length} shown)`;
-    const r = msg.lastResult;
-    if (r) summary += ` — last run: moved ${r.moved}, skipped ${r.skipped.length}, failed ${r.failed.length} in ${r.durationMs}ms`;
     $("summary").textContent = summary;
     renderRows(plan.items);
   }
   $("execute").disabled = !plan || plan.counts.total === 0;
+  // 本次移动去向:执行后逐条列出 源文件名 → 目标路径
+  const r = msg.lastResult;
+  const moved = (r?.movedList ?? []) as { fileName: string; destination: string }[];
+  $("movedWrap").style.display = moved.length ? "" : "none";
+  if (moved.length) {
+    const box = $("movedList");
+    box.textContent = "";
+    for (const m of moved) {
+      const line = document.createElement("div");
+      line.style.cssText = "padding:2px 0;word-break:break-all";
+      const name = document.createElement("b");
+      name.textContent = m.fileName;
+      line.appendChild(name);
+      line.appendChild(document.createTextNode(" → " + m.destination));
+      box.appendChild(line);
+    }
+  }
 }
 
 function failure(message: string) { $("status").textContent = message; }

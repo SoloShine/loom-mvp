@@ -8,6 +8,7 @@ import * as state from "./state";
 import * as history from "./history";
 import { appLogPath } from "./logging";
 import { setEnabledAndReconcile } from "./appManagement";
+import * as windows from "./services/windows";
 import { isTrustedPage, lockControlPage } from "./controlPage";
 import { patchHostSettings } from "./settingsCommit";
 
@@ -27,11 +28,13 @@ function entry(id: string): registry.RegistryEntry {
 }
 function api(e: registry.RegistryEntry) {
   if (registry.isBroken(e)) return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [] as string[], commands: [], hotkeys: [], manifestIssues: [] };
+  const run = manager.listStatuses()[e.id];
   return {
     id: e.id, name: e.name, version: e.version, path: e.path, uiType: e.manifest.ui.type,
     status: manager.status(e.id), enabled: e.enabled, favorite: e.favorite, lastUsedAt: e.lastUsedAt,
     useCount: e.useCount, manifestIssues: e.manifestIssues, commands: e.manifest.commands,
     hotkeys: e.hotkeys, permissions: e.manifest.permissions,
+    pid: run?.status === "running" ? run.pid : undefined,
   };
 }
 function guard(channel: string, fn: (...args: any[]) => unknown): void {
@@ -53,6 +56,16 @@ export function initManagement(onHotkey: (next: string, commit: () => void) => v
     if (name === "start") await manager.start(id);
     else if (name === "stop") await manager.stop(id);
     else if (name === "reload") await manager.reload(id);
+    else if (name === "focus") {
+      // 唤起:窗口被隐藏到托盘后重新显示,不重新计数、不重启进程
+      if (manager.status(id) !== "running") throw new Error(`INVALID_ARGUMENT: App ${id} 未在运行,无需唤起`);
+      if (windows.focusApp(id)) return api(entry(id));
+      if (current.manifest.ui.type !== "none") {
+        windows.createAppWindow(current);
+        return api(entry(id));
+      }
+      throw new Error(`INVALID_ARGUMENT: App ${id} 没有可唤起的窗口`);
+    }
     else if (name === "enable") await setEnabledAndReconcile(id, true);
     else if (name === "disable") await setEnabledAndReconcile(id, false);
     else if (name === "favorite" || name === "unfavorite") { if (!registry.setFavorite(id, name === "favorite")) throw new Error("PERSISTENCE_FAILED: 收藏未保存"); }
