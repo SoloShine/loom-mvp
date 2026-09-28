@@ -1,0 +1,17 @@
+id: clipboard-tool
+name: Clipboard Tool
+version: 0.1.0
+entry: src/main.ts
+ui:
+  type: window
+  width: 540
+  height: 390
+commands:
+  - id: clean
+    title: Clean clipboard text
+  - id: format
+    title: Format clipboard text
+permissions:
+  - clipboard
+  - storage
+  - notification

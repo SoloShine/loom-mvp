@@ -1,0 +1,16 @@
+id: hello
+name: hello
+version: 0.1.0
+
+entry: src/main.ts
+
+ui:
+  type: window
+  width: 360
+  height: 240
+
+commands:
+  - id: ping
+    title: Ping
+  - id: selftest
+    title: 服务自检

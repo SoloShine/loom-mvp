@@ -1,0 +1,13 @@
+node_modules/
+host/dist/
+cli/dist/
+ui/dist/
+data/
+apps/*/dist/
+apps/*/node_modules/
+apps/*/.venv/
+apps/*/.tmp/
+apps/*/debug/
+__pycache__/
+.zcode/
+*.log

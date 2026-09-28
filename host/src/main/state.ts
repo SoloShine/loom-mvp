@@ -1,0 +1,133 @@
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import { paths } from "./config";
+import { logHost } from "./logging";
+
+export interface AppMeta {
+  enabled: boolean;
+  favorite: boolean;
+  addedAt: string;
+  lastUsedAt?: string;
+  useCount: number;
+}
+export interface Settings {
+  launcherHotkey: string;
+  logRetentionDays: number;
+  maxLogBytesPerApp: number;
+}
+interface State {
+  schemaVersion: 1;
+  settings: Settings;
+  apps: Record<string, AppMeta>;
+  migratedFrom?: string;
+}
+export const defaults: Settings = { launcherHotkey: "Ctrl+Shift+M", logRetentionDays: 14, maxLogBytesPerApp: 10 * 1024 * 1024 };
+const stateFile = () => path.join(paths.data, "host-state.json");
+let state: State | undefined;
+let readonly = false;
+
+export function atomicWrite(file: string, value: string): void {
+  const tmp = `${file}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`;
+  try {
+    const fd = fs.openSync(tmp, "wx", 0o600);
+    try { fs.writeFileSync(fd, value); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+    fs.renameSync(tmp, file);
+  } finally {
+    try { fs.rmSync(tmp, { force: true }); } catch { /* leave old file intact */ }
+  }
+}
+function object(v: unknown): v is Record<string, unknown> { return !!v && typeof v === "object" && !Array.isArray(v); }
+function validId(id: string): boolean { return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(id); }
+export { validId };
+function validSettings(s: unknown): s is Settings {
+  return object(s) && typeof s.launcherHotkey === "string" && s.launcherHotkey.length >= 3 && s.launcherHotkey.length <= 80 &&
+    Number.isInteger(s.logRetentionDays) && (s.logRetentionDays as number) >= 1 && (s.logRetentionDays as number) <= 365 &&
+    Number.isInteger(s.maxLogBytesPerApp) && (s.maxLogBytesPerApp as number) >= 1024 && (s.maxLogBytesPerApp as number) <= 1024 * 1024 * 1024;
+}
+function validate(s: unknown): asserts s is State {
+  if (!object(s) || s.schemaVersion !== 1 || !validSettings(s.settings) || !object(s.apps)) throw new Error("host-state schema 无效");
+  for (const [id, meta] of Object.entries(s.apps)) {
+    if (!validId(id) || !object(meta) || typeof meta.enabled !== "boolean" || typeof meta.favorite !== "boolean" ||
+      typeof meta.addedAt !== "string" || (meta.lastUsedAt !== undefined && typeof meta.lastUsedAt !== "string") ||
+      !Number.isSafeInteger(meta.useCount) || (meta.useCount as number) < 0) throw new Error(`host-state App 元数据无效: ${id}`);
+  }
+}
+function backup(file: string): string {
+  const source = fs.readFileSync(file);
+  const digest = crypto.createHash("sha256").update(source).digest("hex");
+  const target = `${file}.${new Date().toISOString().replace(/[:.]/g, "-")}.${digest.slice(0, 12)}.bak`;
+  fs.writeFileSync(target, source, { flag: "wx", mode: 0o600 });
+  if (crypto.createHash("sha256").update(fs.readFileSync(target)).digest("hex") !== digest) throw new Error(`迁移备份校验失败: ${target}`);
+  return digest;
+}
+export function initState(): void {
+  if (state) return;
+  const file = stateFile();
+  if (fs.existsSync(file)) {
+    let raw: unknown;
+    try { raw = JSON.parse(fs.readFileSync(file, "utf8")); } catch (e) {
+      const damaged = `${file}.${Date.now()}.corrupt`;
+      fs.renameSync(file, damaged);
+      logHost("error", `host-state 损坏，已旁路备份: ${damaged}: ${String(e)}`);
+      readonly = true;
+      state = { schemaVersion: 1, settings: { ...defaults }, apps: {} };
+      return;
+    }
+    if (object(raw) && typeof raw.schemaVersion === "number" && raw.schemaVersion > 1) {
+      readonly = true;
+      state = { schemaVersion: 1, settings: { ...defaults }, apps: {} };
+      logHost("error", `host-state 来自较新版本(${raw.schemaVersion})，本版本只读`);
+      return;
+    }
+    try { validate(raw); state = raw; return; } catch (e) {
+      const damaged = `${file}.${Date.now()}.corrupt`;
+      fs.renameSync(file, damaged);
+      readonly = true;
+      state = { schemaVersion: 1, settings: { ...defaults }, apps: {} };
+      logHost("error", `host-state 格式无效，已旁路备份: ${damaged}: ${String(e)}`);
+      return;
+    }
+  }
+  const next: State = { schemaVersion: 1, settings: { ...defaults }, apps: {} };
+  if (fs.existsSync(paths.registryFile)) {
+    const digest = backup(paths.registryFile);
+    next.migratedFrom = digest;
+    try {
+      const legacy: unknown = JSON.parse(fs.readFileSync(paths.registryFile, "utf8"));
+      if (object(legacy) && Array.isArray(legacy.disabled) && legacy.disabled.every((v) => typeof v === "string")) {
+        for (const id of legacy.disabled) if (validId(id)) next.apps[id] = { enabled: false, favorite: false, addedAt: new Date().toISOString(), useCount: 0 };
+      } else logHost("warn", "旧 registry disabled 结构无效，按空集合迁移");
+    } catch { logHost("warn", "旧 registry JSON 无效，按空集合迁移"); }
+  }
+  atomicWrite(file, JSON.stringify(next, null, 2));
+  state = next;
+}
+function current(): State { if (!state) initState(); return state!; }
+function update(mutator: (s: State) => void): void {
+  if (readonly) throw new Error("host-state 只读，先处理损坏或较新版本文件");
+  const next: State = structuredClone(current());
+  mutator(next);
+  validate(next);
+  atomicWrite(stateFile(), JSON.stringify(next, null, 2));
+  state = next;
+}
+export function meta(id: string): AppMeta | undefined { const value = current().apps[id]; return value ? { ...value } : undefined; }
+export function settings(): Settings { return { ...current().settings }; }
+export function patchSettings(patch: unknown): Settings {
+  if (!object(patch) || Object.keys(patch).some((k) => !Object.hasOwn(defaults, k))) throw new Error("设置包含未知字段");
+  const result = { ...settings(), ...patch };
+  if (!validSettings(result)) throw new Error("设置值超出允许范围");
+  update((s) => { s.settings = result; });
+  return settings();
+}
+export function setMeta(id: string, patch: Partial<Pick<AppMeta, "enabled" | "favorite">>): AppMeta {
+  if (!validId(id) || Object.keys(patch).some((k) => k !== "enabled" && k !== "favorite") || Object.values(patch).some((v) => typeof v !== "boolean")) throw new Error("无效 App 元数据");
+  update((s) => { const existing = s.apps[id]; s.apps[id] = { ...(existing ?? { enabled: true, favorite: false, addedAt: new Date().toISOString(), useCount: 0 }), ...patch }; });
+  return meta(id)!;
+}
+export function recordUse(id: string): void {
+  try {
+    update((s) => { const m = s.apps[id] ?? { enabled: true, favorite: false, addedAt: new Date().toISOString(), useCount: 0 }; m.lastUsedAt = new Date().toISOString(); m.useCount++; s.apps[id] = m; });
+  } catch (e) { logHost("warn", `最近使用写入失败 ${id}: ${String(e)}`); }
+}

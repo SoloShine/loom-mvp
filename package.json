@@ -1,0 +1,29 @@
+{
+  "name": "loom-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal Mini App Host",
+  "workspaces": [
+    "host",
+    "cli",
+    "sdk"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "smoke": "node scripts/smoke-host.cjs",
+    "accept": "node scripts/acceptance-timing.cjs",
+    "host": "electron host",
+    "mini": "node cli/dist/mini.js"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.0",
+    "electron": "^44.4.5",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  }
+}

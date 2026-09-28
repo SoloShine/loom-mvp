@@ -1,0 +1,18 @@
+id: file-organizer
+name: File Organizer
+version: 0.2.0
+entry: src/main.ts
+ui:
+  type: window
+  width: 720
+  height: 560
+commands:
+  - id: preview
+    title: Scan directory and preview the plan
+  - id: execute
+    title: Execute the last previewed plan
+permissions:
+  - files
+  - storage
+  - notification
+  - log

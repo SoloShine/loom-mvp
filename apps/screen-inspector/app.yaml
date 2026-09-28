@@ -1,0 +1,15 @@
+id: screen-inspector
+name: Screen Inspector
+version: 0.1.0
+entry: src/main.ts
+ui:
+  type: window
+  width: 600
+  height: 470
+commands:
+  - id: monitors
+    title: List displays
+permissions:
+  - screen
+  - storage
+  - log

@@ -1,0 +1,7 @@
+{
+  "name": "mini-host",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal Mini App Host — Electron main process",
+  "main": "dist/main/index.js"
+}

@@ -1,0 +1,43 @@
+id: lianliankan
+name: 连连看求解器
+version: 0.1.0
+
+entry: src/main.ts
+
+ui:
+  type: floating
+  width: 400
+  height: 630
+
+commands:
+  - id: solve
+    title: 自动求解
+  - id: step
+    title: 单步求解
+  - id: plan
+    title: 解算预演(输出步骤不下子)
+  - id: select-region
+    title: 选区(系统截图工具)
+  - id: select-region-corner
+    title: 角点选区(点两个角)
+  - id: set-grid
+    title: 设置行列
+  - id: status
+    title: 查看状态
+  - id: scan-probe
+    title: 扫描探针(调试)
+  - id: selftest
+    title: helper 自检
+  - id: hide
+    title: 隐藏面板
+
+hotkeys:
+  solve: Ctrl+Shift+K
+
+permissions:
+  - screen.capture
+  - screen.selectRegion
+  - mouse.control
+  - storage
+  - process.spawn
+  - notification

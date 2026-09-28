@@ -1,0 +1,9 @@
+{
+  "name": "lianliankan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "连连看求解器 — migrated from D:\\Project\\lianliankan",
+  "dependencies": {
+    "@mini/sdk": "*"
+  }
+}

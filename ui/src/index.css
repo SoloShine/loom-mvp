@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.988 0.002 247.839);
+  --foreground: oklch(0.21 0.034 264.665);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.034 264.665);
+  --primary: oklch(0.54 0.19 262.2);
+  --primary-foreground: oklch(0.985 0.002 247.839);
+  --secondary: oklch(0.965 0.004 264.542);
+  --secondary-foreground: oklch(0.28 0.04 264.665);
+  --muted: oklch(0.965 0.004 264.542);
+  --muted-foreground: oklch(0.54 0.027 264.364);
+  --accent: oklch(0.955 0.007 262);
+  --accent-foreground: oklch(0.28 0.04 264.665);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0.008 264.531);
+  --input: oklch(0.922 0.008 264.531);
+  --ring: oklch(0.54 0.19 262.2);
+}
+
+.dark {
+  --background: oklch(0.165 0.018 262);
+  --foreground: oklch(0.93 0.008 255);
+  --card: oklch(0.205 0.022 262);
+  --card-foreground: oklch(0.93 0.008 255);
+  --primary: oklch(0.68 0.16 262);
+  --primary-foreground: oklch(0.16 0.03 262);
+  --secondary: oklch(0.26 0.024 262);
+  --secondary-foreground: oklch(0.92 0.01 255);
+  --muted: oklch(0.26 0.024 262);
+  --muted-foreground: oklch(0.68 0.02 264);
+  --accent: oklch(0.27 0.028 262);
+  --accent-foreground: oklch(0.93 0.008 255);
+  --destructive: oklch(0.66 0.2 25);
+  --border: oklch(0.29 0.026 262);
+  --input: oklch(0.31 0.026 262);
+  --ring: oklch(0.6 0.16 262);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  }
+}

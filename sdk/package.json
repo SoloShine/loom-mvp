@@ -1,0 +1,8 @@
+{
+  "name": "@mini/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mini App Host SDK — provided by the running Host, never bundled/pinned by apps",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
