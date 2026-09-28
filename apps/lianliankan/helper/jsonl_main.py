@@ -192,7 +192,10 @@ class Session:
                 self.empty_detector.learn_background(
                     image, int(entry["row"]), int(entry["col"])
                 )
-            self._failed_pairs.clear()
+            # 注意:这里绝不能清 _failed_pairs。排除表里的对只会失效、不会复活
+            # ——两块之一被消除后该对不再可能出现;验证失败=同图误判,块不消失
+            # 就一直失败。2026-09-28 实测:成功后清表导致同一失败对被重扫反复
+            # 重点(同一对 3 连败直至自动终止)。
         return {"empties": empties, "learned": all_empty}
 
     def learn_background(self, params: dict) -> dict:
