@@ -11,6 +11,7 @@ import { setEnabledAndReconcile } from "./appManagement";
 import * as windows from "./services/windows";
 import { isTrustedPage, lockControlPage } from "./controlPage";
 import { patchHostSettings } from "./settingsCommit";
+import { describeIdleStop } from "./idleStop";
 
 let window: BrowserWindow | null = null;
 let updateHotkey: ((next: string, commit: () => void) => void) | null = null;
@@ -27,7 +28,7 @@ function entry(id: string): registry.RegistryEntry {
   return found;
 }
 function api(e: registry.RegistryEntry) {
-  if (registry.isBroken(e)) return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [] as string[], commands: [], hotkeys: [], manifestIssues: [] };
+  if (registry.isBroken(e)) return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [] as string[], commands: [], hotkeys: [], manifestIssues: [], idleStop: describeIdleStop(e, state.settings()) };
   const run = manager.listStatuses()[e.id];
   return {
     id: e.id, name: e.name, version: e.version, path: e.path, uiType: e.manifest.ui.type,
@@ -35,6 +36,7 @@ function api(e: registry.RegistryEntry) {
     useCount: e.useCount, manifestIssues: e.manifestIssues, commands: e.manifest.commands,
     hotkeys: e.hotkeys, permissions: e.manifest.permissions,
     pid: run?.status === "running" ? run.pid : undefined,
+    idleStop: describeIdleStop(e, state.settings()),
   };
 }
 function guard(channel: string, fn: (...args: any[]) => unknown): void {

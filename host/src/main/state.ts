@@ -11,10 +11,19 @@ export interface AppMeta {
   lastUsedAt?: string;
   useCount: number;
 }
+export interface RecycleSettings {
+  /** 总开关。关闭时清单声明也不生效。 */
+  enabled: boolean;
+  /** 全局默认闲置回收时长(分钟)。0 = 只回收清单声明过的 App。 */
+  defaultMinutes: number;
+  /** 例外名单:名单内的 App 永不自动回收。 */
+  exemptAppIds: string[];
+}
 export interface Settings {
   launcherHotkey: string;
   logRetentionDays: number;
   maxLogBytesPerApp: number;
+  recycle: RecycleSettings;
 }
 interface State {
   schemaVersion: 1;
@@ -22,7 +31,12 @@ interface State {
   apps: Record<string, AppMeta>;
   migratedFrom?: string;
 }
-export const defaults: Settings = { launcherHotkey: "Ctrl+Shift+M", logRetentionDays: 14, maxLogBytesPerApp: 10 * 1024 * 1024 };
+export const defaults: Settings = {
+  launcherHotkey: "Ctrl+Shift+M",
+  logRetentionDays: 14,
+  maxLogBytesPerApp: 10 * 1024 * 1024,
+  recycle: { enabled: false, defaultMinutes: 0, exemptAppIds: [] },
+};
 const stateFile = () => path.join(paths.data, "host-state.json");
 let state: State | undefined;
 let readonly = false;
@@ -41,9 +55,18 @@ function object(v: unknown): v is Record<string, unknown> { return !!v && typeof
 function validId(id: string): boolean { return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(id); }
 export { validId };
 function validSettings(s: unknown): s is Settings {
-  return object(s) && typeof s.launcherHotkey === "string" && s.launcherHotkey.length >= 3 && s.launcherHotkey.length <= 80 &&
+  if (!object(s)) return false;
+  const r: unknown = s.recycle;
+  return typeof s.launcherHotkey === "string" && s.launcherHotkey.length >= 3 && s.launcherHotkey.length <= 80 &&
     Number.isInteger(s.logRetentionDays) && (s.logRetentionDays as number) >= 1 && (s.logRetentionDays as number) <= 365 &&
-    Number.isInteger(s.maxLogBytesPerApp) && (s.maxLogBytesPerApp as number) >= 1024 && (s.maxLogBytesPerApp as number) <= 1024 * 1024 * 1024;
+    Number.isInteger(s.maxLogBytesPerApp) && (s.maxLogBytesPerApp as number) >= 1024 && (s.maxLogBytesPerApp as number) <= 1024 * 1024 * 1024 &&
+    object(r) && typeof r.enabled === "boolean" &&
+    Number.isInteger(r.defaultMinutes) && (r.defaultMinutes as number) >= 0 && (r.defaultMinutes as number) <= 7 * 24 * 60 &&
+    Array.isArray(r.exemptAppIds) && r.exemptAppIds.length <= 500 && r.exemptAppIds.every((id) => typeof id === "string" && validId(id));
+}
+/** 旧版本 host-state.json 没有 recycle 段,读入时补默认值,避免整份文件被误判损坏。 */
+function normalizeSettings(s: unknown): void {
+  if (object(s) && s.recycle === undefined) s.recycle = { enabled: false, defaultMinutes: 0, exemptAppIds: [] };
 }
 function validate(s: unknown): asserts s is State {
   if (!object(s) || s.schemaVersion !== 1 || !validSettings(s.settings) || !object(s.apps)) throw new Error("host-state schema 无效");
@@ -80,6 +103,7 @@ export function initState(): void {
       logHost("error", `host-state 来自较新版本(${raw.schemaVersion})，本版本只读`);
       return;
     }
+    normalizeSettings(object(raw) ? raw.settings : undefined);
     try { validate(raw); state = raw; return; } catch (e) {
       const damaged = `${file}.${Date.now()}.corrupt`;
       fs.renameSync(file, damaged);
@@ -113,7 +137,10 @@ function update(mutator: (s: State) => void): void {
   state = next;
 }
 export function meta(id: string): AppMeta | undefined { const value = current().apps[id]; return value ? { ...value } : undefined; }
-export function settings(): Settings { return { ...current().settings }; }
+export function settings(): Settings {
+  const s = current().settings;
+  return { ...s, recycle: { ...s.recycle, exemptAppIds: [...s.recycle.exemptAppIds] } };
+}
 export function patchSettings(patch: unknown): Settings {
   if (!object(patch) || Object.keys(patch).some((k) => !Object.hasOwn(defaults, k))) throw new Error("设置包含未知字段");
   const result = { ...settings(), ...patch };

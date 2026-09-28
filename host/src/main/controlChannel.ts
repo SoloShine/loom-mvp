@@ -6,6 +6,7 @@ import { appLogPath, logHost } from "./logging";
 import * as registry from "./registry";
 import * as manager from "./runtime/manager";
 import * as state from "./state";
+import { describeIdleStop } from "./idleStop";
 import * as history from "./history";
 import { setEnabledAndReconcile } from "./appManagement";
 import * as windows from "./services/windows";
@@ -50,7 +51,7 @@ function readBody(req: http.IncomingMessage): Promise<any> {
 
 function appToApi(e: registry.RegistryEntry) {
   if (registry.isBroken(e)) {
-    return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [], commands: [], hotkeys: [], manifestIssues: [] };
+    return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [], commands: [], hotkeys: [], manifestIssues: [], idleStop: describeIdleStop(e, state.settings()) };
   }
   const run = manager.status(e.id);
   const runInfo = manager.listStatuses()[e.id];
@@ -71,6 +72,7 @@ function appToApi(e: registry.RegistryEntry) {
     commands: e.manifest.commands,
     hotkeys: e.hotkeys,
     permissions: e.manifest.permissions,
+    idleStop: describeIdleStop(e, state.settings()),
   };
 }
 

@@ -1,3 +1,12 @@
+export interface IdleStopInfo {
+  /** 清单声明 lifecycle.idleStopMinutes 的值;未声明为 undefined。 */
+  manifestMinutes?: number;
+  /** 在设置页例外名单中,永不自动回收。 */
+  exempt: boolean;
+  /** 当前实际生效的策略;null = 不会自动回收。 */
+  effective: { minutes: number; source: "manifest" | "global" } | null;
+}
+
 export interface AppInfo {
   id: string;
   name: string;
@@ -12,15 +21,23 @@ export interface AppInfo {
   lastUsedAt?: string;
   useCount?: number;
   manifestIssues?: string[];
+  idleStop?: IdleStopInfo;
   commands: { id: string; title: string }[];
   hotkeys?: { combo: string; command: string }[];
   permissions: string[];
+}
+
+export interface RecycleSettings {
+  enabled: boolean;
+  defaultMinutes: number;
+  exemptAppIds: string[];
 }
 
 export interface HostSettings {
   launcherHotkey: string;
   logRetentionDays: number;
   maxLogBytesPerApp: number;
+  recycle: RecycleSettings;
 }
 
 export interface HistoryEvent {

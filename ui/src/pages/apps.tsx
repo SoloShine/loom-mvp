@@ -185,6 +185,21 @@ export function AppsPage({ query }: { query: string }) {
               </Row>
               <Row label="UI 类型"><Badge variant="secondary">{detail.uiType ?? "none"}</Badge></Row>
               {detail.pid && <Row label="进程 PID"><span className="font-mono text-xs">{detail.pid}</span></Row>}
+              {detail.idleStop && (
+                <Row label="闲置回收">
+                  {detail.idleStop.effective ? (
+                    <Badge variant="secondary">
+                      闲置 {detail.idleStop.effective.minutes} 分钟后自动回收({detail.idleStop.effective.source === "manifest" ? "清单声明" : "全局默认"})
+                    </Badge>
+                  ) : detail.idleStop.exempt ? (
+                    <Badge variant="outline">例外名单中,不自动回收</Badge>
+                  ) : detail.idleStop.manifestMinutes ? (
+                    <Badge variant="outline">清单声明 {detail.idleStop.manifestMinutes} 分钟 · 总开关未开</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">未启用</span>
+                  )}
+                </Row>
+              )}
               <Row label="使用次数">{detail.useCount ?? 0} 次</Row>
               <Row label="最近使用">{detail.lastUsedAt ?? "暂无"}</Row>
             </Card>

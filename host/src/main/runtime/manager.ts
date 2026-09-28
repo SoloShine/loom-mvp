@@ -4,6 +4,8 @@ import { get, getError, rescan, type AppEntry } from "../registry";
 import { paths } from "../config";
 import { logHost, logApp } from "../logging";
 import { dispatch } from "../services/dispatcher";
+import { effectiveIdleStop } from "../idleStop";
+import * as state from "../state";
 import * as hotkeys from "../services/hotkeys";
 import * as windows from "../services/windows";
 import * as processSvc from "../services/processSvc";
@@ -32,6 +34,8 @@ interface RunState {
   invokeWaiters: Map<number, Waiter>;
   readyWaiter?: Waiter;
   startedWaiter?: Waiter;
+  /** 闲置回收触发的停止;写 stop 事件时用于标记 idle-timeout,下次 start 重置。 */
+  stopReason?: "idle";
 }
 
 const runs = new Map<string, RunState>();
@@ -93,6 +97,13 @@ function safeClone(v: unknown): unknown {
   return JSON.parse(JSON.stringify(v ?? null));
 }
 
+/** stop 事件的原因标记:超时强停 / 闲置回收 / 普通停止(无标记)。 */
+function stopEventMessage(st: RunState): string | undefined {
+  if (st.forcedStop) return "timeout";
+  if (st.stopReason === "idle") return "idle-timeout";
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 
 export function status(id: string): RunStatus {
@@ -118,6 +129,7 @@ export async function start(id: string): Promise<void> {
   st.status = "starting";
   st.stopRequested = false;
   st.forcedStop = false;
+  st.stopReason = undefined;
   st.hotkeyFailures = [];
 
   try {
@@ -207,7 +219,7 @@ export async function stop(id: string): Promise<void> {
       st.startedAt = undefined;
       if (st.runId) {
         const runId = st.runId;
-        if (!history.event({ appId: id, runId, kind: "stop", outcome: st.forcedStop ? "failure" : "success", message: st.forcedStop ? "timeout" : undefined })) throw new Error("PERSISTENCE_FAILED: history stop");
+        if (!history.event({ appId: id, runId, kind: "stop", outcome: st.forcedStop ? "failure" : "success", message: stopEventMessage(st) })) throw new Error("PERSISTENCE_FAILED: history stop");
         history.finish(runId);
         st.runId = undefined;
       }
@@ -274,7 +286,8 @@ export async function stopAll(): Promise<void> {
   }
 }
 
-// —— 闲置自动停止(manifest lifecycle.idleStopMinutes,缺省关闭)——————
+// —— 闲置自动回收(设置页「闲置回收」+ 清单 lifecycle.idleStopMinutes)——————
+// 生效规则见 idleStop.ts:总开关、例外名单、清单声明优先/全局默认兜底。
 // 活跃 = invoke、启动成功、窗口 show/focus;超时走正常 stop(可被重新启动)。
 const lastActivity = new Map<string, number>();
 
@@ -287,13 +300,24 @@ const IDLE_CHECK_INTERVAL_MS = 30_000;
 setInterval(() => {
   for (const [id, st] of runs) {
     if (st.status !== "running") continue;
-    const minutes = get(id)?.manifest.lifecycle?.idleStopMinutes ?? 0;
-    if (minutes <= 0) continue;
+    const app = get(id);
+    if (!app || !app.enabled) continue;
+    const policy = effectiveIdleStop(id, app.manifest.lifecycle?.idleStopMinutes, state.settings());
+    if (!policy) continue;
     const last = lastActivity.get(id) ?? st.startedAt;
-    if (last && Date.now() - last >= minutes * 60_000) {
-      logApp(id, "info", `闲置超过 ${minutes} 分钟,自动停止(lifecycle.idleStopMinutes)`);
+    if (last && Date.now() - last >= policy.minutes * 60_000) {
+      const where = policy.source === "manifest" ? "清单声明" : "全局默认";
+      logApp(id, "info", `闲置超过 ${policy.minutes} 分钟,自动回收(${where};可在 设置→闲置回收 调整)`);
       lastActivity.set(id, Date.now()); // 防止 stop 慢时下一轮重复触发
-      void stop(id).catch(() => { /* stop 失败已记日志 */ });
+      st.stopReason = "idle";
+      const name = app.name;
+      const minutes = policy.minutes;
+      void stop(id)
+        .then(() => notificationApi.show({
+          title: `${name} 已闲置自动停止`,
+          body: `闲置超过 ${minutes} 分钟(${where});可在 设置 → 闲置回收 调整。`,
+        }))
+        .catch(() => { st.stopReason = undefined; /* stop 失败已记日志 */ });
     }
   }
 }, IDLE_CHECK_INTERVAL_MS);
@@ -400,7 +424,7 @@ function onProcExit(id: string, code: number, proc: UtilityProcess): void {
       if (st.runId) {
         const runId = st.runId;
         if (history.hasTerminal(runId)) { try { history.finish(runId); st.runId = undefined; } catch (e) { logHost("error", `active-runs 清理失败: ${String(e)}`); } }
-        else if (history.event({ appId: id, runId, kind: "stop", outcome: st.forcedStop ? "failure" : "success", message: st.forcedStop ? "timeout" : undefined })) {
+        else if (history.event({ appId: id, runId, kind: "stop", outcome: st.forcedStop ? "failure" : "success", message: stopEventMessage(st) })) {
           try { history.finish(runId); st.runId = undefined; } catch (e) { logHost("error", `active-runs 清理失败: ${String(e)}`); }
         }
       }
@@ -427,4 +451,6 @@ function cleanup(id: string, st: RunState): void {
   hotkeys.unregisterApp(id);
   processSvc.killAppHelpers(id);
   windows.closeAppWindows(id);
+  // 清掉上一轮运行的活跃时间戳,否则重启后新进程直接带着旧时间被判定闲置
+  lastActivity.delete(id);
 }
