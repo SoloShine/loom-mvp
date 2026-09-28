@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { copyFile, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -80,34 +80,38 @@ await Promise.all([
   }),
 ]);
 
-// Management UI: the React renderer in ui/ is the production page whenever
-// its toolchain is installed; the legacy esbuild page stays as the fallback
-// (remove ui/node_modules to force it). Vite emits a classic IIFE script and
-// an external stylesheet; here we normalize the Vite HTML for file:// + strict
-// CSP (no module scripts, no crossorigin, CSP meta injected at copy time).
+// Control pages (management + launcher): the React renderers in ui/ are the
+// production pages whenever its toolchain is installed; the legacy esbuild
+// pages stay as the fallback (remove ui/node_modules to force it). Vite emits
+// a classic IIFE script and an external stylesheet; below we normalize the
+// Vite HTML for file:// + strict CSP (no module scripts, no crossorigin, CSP
+// meta injected at copy time).
 const viteBin = r("ui", "node_modules", "vite", "bin", "vite.js");
-const reactManagement = existsSync(viteBin);
-if (reactManagement) {
+const reactAvailable = existsSync(viteBin);
+if (reactAvailable) {
   const res = spawnSync(process.execPath, [viteBin, "build"], { cwd: r("ui"), stdio: "inherit" });
   if (res.status !== 0) throw new Error("ui renderer build failed");
   await rm(r("host/dist/management"), { recursive: true, force: true });
   await mkdir(r("host/dist/management"), { recursive: true });
   await cp(r("ui", "dist"), r("host/dist", "management"), { recursive: true });
+  console.log("react pass 1/2: management page built");
+  // pass 2: palette page — same pipeline, separate entry (Rollup's iife output
+  // format forbids multiple html inputs in one pass)
+  const launcher = spawnSync(process.execPath, [viteBin, "build", "-c", "vite.config.launcher.ts"], { cwd: r("ui"), stdio: "inherit" });
+  if (launcher.status !== 0) throw new Error("ui launcher build failed");
+  await rm(r("host/dist/launcher"), { recursive: true, force: true });
+  await mkdir(r("host/dist/launcher"), { recursive: true });
+  await cp(r("ui", "dist-launcher"), r("host/dist", "launcher"), { recursive: true });
+  // main process loads launcher/index.html (frozen path); Vite names the html
+  // after the input file, so rename it after the copy
+  await rename(r("host/dist/launcher/launcher.html"), r("host/dist/launcher/index.html"));
+  console.log("react pass 2/2: launcher page built");
 }
 
 for (const page of ["management", "launcher"]) {
-  if (page === "management" && reactManagement) {
-    const built = await readFile(r("host/dist/management/index.html"), "utf8");
-    let out = built.replace(
-      /<script type="module" crossorigin src="(.*?)"><\/script>/,
-      '<script defer src="$1"></script>',
-    );
-    if (out === built) throw new Error("management renderer: Vite script tag not found");
-    out = out.replace(/<link rel="stylesheet" crossorigin href="(.*?)">/, '<link rel="stylesheet" href="$1">');
-    const csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\';">';
-    out = out.replace(/<meta charset="UTF-8"\s*\/>/, `<meta charset="UTF-8" />${csp}`);
-    if (!out.includes("Content-Security-Policy")) throw new Error("management renderer: CSP not injected");
-    await writeFile(r("host/dist/management/index.html"), out);
+  if (reactAvailable) {
+    const built = await readFile(r("host/dist", page, "index.html"), "utf8");
+    await writeFile(r("host/dist", page, "index.html"), normalizeHtml(page, built));
     continue;
   }
   const html = await readFile(r("host/src", page, "index.html"), "utf8");
@@ -128,6 +132,22 @@ const pkg = JSON.parse(await readFile(r("package.json"), "utf8"));
 await writeFile(r("host/dist/version.json"), JSON.stringify({ version: pkg.version }, null, 2));
 
 console.log("build ok");
+
+// Normalize one Vite-built page for file:// + strict CSP: classic deferred
+// script, no crossorigin, CSP meta injected. Replacements and assertions run
+// per page so a broken page fails its own copy step.
+function normalizeHtml(page, built) {
+  let out = built.replace(
+    /<script type="module" crossorigin src="(.*?)"><\/script>/,
+    '<script defer src="$1"></script>',
+  );
+  if (out === built) throw new Error(`${page} renderer: Vite script tag not found`);
+  out = out.replace(/<link rel="stylesheet" crossorigin href="(.*?)">/, '<link rel="stylesheet" href="$1">');
+  const csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\'; style-src \'self\';">';
+  out = out.replace(/<meta charset="UTF-8"\s*\/>/, `<meta charset="UTF-8" />${csp}`);
+  if (!out.includes("Content-Security-Policy")) throw new Error(`${page} renderer: CSP not injected`);
+  return out;
+}
 
 async function copyWithBom(src, dest) {
   const buf = await readFile(src);

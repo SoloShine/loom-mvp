@@ -1,4 +1,4 @@
-import type { AppInfo, HistoryEvent, HostSettings } from "@/types";
+import type { AppInfo, HistoryEvent, HostSettings, LauncherAppInfo } from "@/types";
 
 // Demo data used when the page runs outside Electron (no preload bridge),
 // so the UI can be developed and reviewed in a plain browser.
@@ -115,3 +115,45 @@ export const mockSettings: HostSettings = {
   maxLogBytesPerApp: 1048576,
   recycle: { enabled: false, defaultMinutes: 30, exemptAppIds: ["lianliankan"], notify: false },
 };
+
+// Launcher 面板演示数据:覆盖收藏 / 近期使用 / 多命令 / 无命令 / 无 lastUsedAt。
+export const mockLauncherApps: LauncherAppInfo[] = [
+  {
+    id: "lianliankan",
+    name: "连连看助手",
+    version: "0.1.0",
+    status: "running",
+    favorite: true,
+    lastUsedAt: "2026-09-28 10:12",
+    commands: [
+      { id: "select-region", title: "框选棋盘区域" },
+      { id: "solve", title: "扫描并求解" },
+    ],
+  },
+  {
+    id: "file-organizer",
+    name: "文件整理器",
+    version: "0.2.0",
+    status: "running",
+    lastUsedAt: "2026-09-28 09:30",
+    commands: [
+      { id: "preview", title: "扫描目录并预览计划" },
+      { id: "execute", title: "执行当前计划" },
+    ],
+  },
+  {
+    id: "hello",
+    name: "Hello",
+    version: "0.1.0",
+    status: "stopped",
+    lastUsedAt: "2026-09-26 18:40",
+    commands: [],
+  },
+  {
+    id: "screen-inspector",
+    name: "屏幕检查器",
+    version: "0.1.0",
+    status: "stopped",
+    commands: [{ id: "capture", title: "截取屏幕" }],
+  },
+];

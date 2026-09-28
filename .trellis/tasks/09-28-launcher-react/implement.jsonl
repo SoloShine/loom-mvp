@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/mini-host/frontend/index.md", "reason": "ui/ 铁律：技术栈 pinned（禁中后台组件库）、演示模式、双主题验收、npmmirror registry"}
+{"file": ".trellis/spec/mini-host/frontend/directory-structure.md", "reason": "新入口/页面/lib 归属、@/ alias、status 单一事实等约定"}
+{"file": ".trellis/spec/mini-host/frontend/state-management.md", "reason": "bridge 单入口、mock 回退、initTheme 先于 render 防闪屏、types.ts 契约纪律"}
+{"file": ".trellis/spec/mini-host/frontend/component-guidelines.md", "reason": "基础件优先、语义色 token（禁硬编码色）、三态渲染、常见错误清单"}
+{"file": ".trellis/spec/mini-host/frontend/quality-guidelines.md", "reason": "IIFE+cssCodeSplit+CSP 硬约束来历、禁止运行时 style 注入（改 vite config 前必读）"}
+{"file": "docs/post-mvp-plan.md", "reason": "P1.1 交互设计与验收原文（Raycast 式交互、通道不变、<300ms 体感）"}

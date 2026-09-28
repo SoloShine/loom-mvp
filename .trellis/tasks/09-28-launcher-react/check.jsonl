@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/mini-host/frontend/quality-guidelines.md", "reason": "检查构建产物：CSP meta、非 module script、外链 CSS、回退路径可用"}
+{"file": ".trellis/spec/mini-host/frontend/component-guidelines.md", "reason": "检查双主题、三态、cn() 合并、无硬编码色"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "npm test 闸门与验证纪律（报完成前必跑）"}
+{"file": "docs/post-mvp-plan.md", "reason": "P1.1 验收标准原文（fuzzy 排序/主题/300ms/回退）"}

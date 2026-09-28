@@ -2,9 +2,12 @@
 
 ## 构建管线（必读：file:// + CSP 的来历）
 
-产线链路在 `scripts/build.mjs`：spawn `ui/` 的 `vite build` → 产物拷到
-`host/dist/management/` → **HTML 归一化**（`<script type="module" crossorigin>` 改
-`<script defer>`、去掉 link 的 crossorigin、注入 CSP meta）→ 打包进 Host。
+产线链路在 `scripts/build.mjs`：**两遍 Vite 构建**（管理中心 `vite build` → `ui/dist` →
+`host/dist/management/`；Launcher `vite build -c vite.config.launcher.ts` →
+`ui/dist-launcher` → 改名 index.html → `host/dist/launcher/`。Rollup 的 iife 输出
+不支持多入口，所以是两遍而不是一个工程多 HTML）→ 产物 HTML **逐页归一化**
+（`normalizeHtml()`：`<script type="module" crossorigin>` 改 `<script defer>`、
+去掉 link 的 crossorigin、注入 CSP meta，每页带断言，失败即 throw）→ 打包进 Host。
 
 为什么必须这样（每一环都撞过真实报错）：
 

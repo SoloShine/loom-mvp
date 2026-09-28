@@ -64,3 +64,25 @@ export interface ManagementBridge {
   getSettings(): Promise<HostSettings>;
   patchSettings(patch: Partial<HostSettings>): Promise<HostSettings>;
 }
+
+/** Launcher 面板条目;主进程 getApps 已过滤禁用/损坏项,渲染层无 unavailable 分支。 */
+export interface LauncherAppInfo {
+  id: string;
+  name: string;
+  version?: string;
+  status: string;
+  favorite?: boolean;
+  lastUsedAt?: string;
+  commands: { id: string; title: string }[];
+}
+
+/** Shape of window.__launcher, injected by host/src/preload/launcher.ts. */
+export interface LauncherBridge {
+  getApps(): Promise<LauncherAppInfo[]>;
+  startApp(id: string): Promise<boolean>;
+  invokeCommand(id: string, command: string): Promise<boolean>;
+  hide(): void;
+  openManagement(): void;
+  onError(cb: (message: string) => void): void;
+  onRefresh(cb: () => void): void;
+}

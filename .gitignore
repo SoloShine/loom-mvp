@@ -2,6 +2,7 @@ node_modules/
 host/dist/
 cli/dist/
 ui/dist/
+ui/dist-launcher/
 data/
 apps/*/dist/
 apps/*/node_modules/
