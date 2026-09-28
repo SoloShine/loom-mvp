@@ -313,10 +313,14 @@ setInterval(() => {
       const name = app.name;
       const minutes = policy.minutes;
       void stop(id)
-        .then(() => notificationApi.show({
-          title: `${name} 已闲置自动停止`,
-          body: `闲置超过 ${minutes} 分钟(${where});可在 设置 → 闲置回收 调整。`,
-        }))
+        .then(() => {
+          // 通知默认关(recycle.notify),避免频繁弹窗打扰;历史与日志始终可查
+          if (!state.settings().recycle.notify) return;
+          notificationApi.show({
+            title: `${name} 已闲置自动停止`,
+            body: `闲置超过 ${minutes} 分钟(${where});可在 设置 → 闲置回收 调整。`,
+          });
+        })
         .catch(() => { st.stopReason = undefined; /* stop 失败已记日志 */ });
     }
   }

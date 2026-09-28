@@ -18,6 +18,8 @@ export interface RecycleSettings {
   defaultMinutes: number;
   /** 例外名单:名单内的 App 永不自动回收。 */
   exemptAppIds: string[];
+  /** 回收触发时弹系统通知;默认关,避免打扰。历史与日志始终可查。 */
+  notify: boolean;
 }
 export interface Settings {
   launcherHotkey: string;
@@ -35,7 +37,7 @@ export const defaults: Settings = {
   launcherHotkey: "Ctrl+Shift+M",
   logRetentionDays: 14,
   maxLogBytesPerApp: 10 * 1024 * 1024,
-  recycle: { enabled: false, defaultMinutes: 0, exemptAppIds: [] },
+  recycle: { enabled: false, defaultMinutes: 0, exemptAppIds: [], notify: false },
 };
 const stateFile = () => path.join(paths.data, "host-state.json");
 let state: State | undefined;
@@ -62,11 +64,21 @@ function validSettings(s: unknown): s is Settings {
     Number.isInteger(s.maxLogBytesPerApp) && (s.maxLogBytesPerApp as number) >= 1024 && (s.maxLogBytesPerApp as number) <= 1024 * 1024 * 1024 &&
     object(r) && typeof r.enabled === "boolean" &&
     Number.isInteger(r.defaultMinutes) && (r.defaultMinutes as number) >= 0 && (r.defaultMinutes as number) <= 7 * 24 * 60 &&
+    typeof r.notify === "boolean" &&
     Array.isArray(r.exemptAppIds) && r.exemptAppIds.length <= 500 && r.exemptAppIds.every((id) => typeof id === "string" && validId(id));
 }
-/** 旧版本 host-state.json 没有 recycle 段,读入时补默认值,避免整份文件被误判损坏。 */
+/** 旧版本 host-state.json 缺少 recycle 段或段内新字段时逐项补默认值,避免整份文件被误判损坏。 */
 function normalizeSettings(s: unknown): void {
-  if (object(s) && s.recycle === undefined) s.recycle = { enabled: false, defaultMinutes: 0, exemptAppIds: [] };
+  if (!object(s)) return;
+  if (object(s.recycle)) {
+    const r = s.recycle as Record<string, unknown>;
+    if (r.enabled === undefined) r.enabled = false;
+    if (r.defaultMinutes === undefined) r.defaultMinutes = 0;
+    if (r.exemptAppIds === undefined) r.exemptAppIds = [];
+    if (r.notify === undefined) r.notify = false;
+  } else if (s.recycle === undefined) {
+    s.recycle = { enabled: false, defaultMinutes: 0, exemptAppIds: [], notify: false };
+  }
 }
 function validate(s: unknown): asserts s is State {
   if (!object(s) || s.schemaVersion !== 1 || !validSettings(s.settings) || !object(s.apps)) throw new Error("host-state schema 无效");

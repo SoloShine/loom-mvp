@@ -31,6 +31,7 @@ export interface RecycleSettings {
   enabled: boolean;
   defaultMinutes: number;
   exemptAppIds: string[];
+  notify: boolean;
 }
 
 export interface HostSettings {

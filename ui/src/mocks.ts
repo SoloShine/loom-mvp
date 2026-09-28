@@ -113,5 +113,5 @@ export const mockSettings: HostSettings = {
   launcherHotkey: "Ctrl+Shift+M",
   logRetentionDays: 14,
   maxLogBytesPerApp: 1048576,
-  recycle: { enabled: false, defaultMinutes: 30, exemptAppIds: ["lianliankan"] },
+  recycle: { enabled: false, defaultMinutes: 30, exemptAppIds: ["lianliankan"], notify: false },
 };

@@ -39,6 +39,7 @@ export function SettingsPage() {
   const [recycleEnabled, setRecycleEnabled] = useState(false);
   const [recycleMinutes, setRecycleMinutes] = useState("");
   const [exempt, setExempt] = useState<string[]>([]);
+  const [notify, setNotify] = useState(false);
   const [appOptions, setAppOptions] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -53,6 +54,7 @@ export function SettingsPage() {
         setRecycleEnabled(s.recycle.enabled);
         setRecycleMinutes(String(s.recycle.defaultMinutes));
         setExempt(s.recycle.exemptAppIds);
+        setNotify(s.recycle.notify);
       })
       .catch((e) => toast(errorMessage(e), true));
     bridge.getApps()
@@ -72,6 +74,7 @@ export function SettingsPage() {
           enabled: recycleEnabled,
           defaultMinutes: Number(recycleMinutes) || 0,
           exemptAppIds: exempt,
+          notify,
         },
       });
       setSettings(fresh);
@@ -81,6 +84,7 @@ export function SettingsPage() {
       setRecycleEnabled(fresh.recycle.enabled);
       setRecycleMinutes(String(fresh.recycle.defaultMinutes));
       setExempt(fresh.recycle.exemptAppIds);
+      setNotify(fresh.recycle.notify);
       toast("设置已保存,热键与闲置回收即时生效");
     } catch (e) {
       toast(errorMessage(e), true);
@@ -140,10 +144,17 @@ export function SettingsPage() {
                 <div>
                   <div className="text-[13px] font-medium">总开关</div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
-                    开启后,运行中的 App 闲置超时会被自动停止并弹窗告知;关闭时连清单声明也不生效
+                    开启后,运行中的 App 闲置超时会被自动停止;关闭时连清单声明也不生效
                   </div>
                 </div>
                 <Switch checked={recycleEnabled} onCheckedChange={setRecycleEnabled} aria-label="闲置回收总开关" />
+              </div>
+              <div className="flex items-center justify-between gap-6 py-3">
+                <div>
+                  <div className="text-[13px] font-medium">停止时弹窗提醒</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">闲置回收触发时弹系统通知;默认关闭,历史与日志始终可查</div>
+                </div>
+                <Switch checked={notify} onCheckedChange={setNotify} aria-label="闲置回收弹窗提醒" />
               </div>
               <div className="flex items-center justify-between gap-6 py-3">
                 <div>
