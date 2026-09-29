@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/mini-cli/backend/command-pattern.md", "reason": "cmdCreate 参数解析模式、HELP 同步、create 产出结构与 PRD §3 对齐、30 秒承诺"}
+{"file": ".trellis/spec/mini-cli/backend/directory-structure.md", "reason": "build/create/client 职责边界（manifest 唯一事实在 host）"}
+{"file": ".trellis/spec/mini-cli/backend/error-handling.md", "reason": "die()/exitCode 纪律（npm install 失败、非法模板名）"}
+{"file": ".trellis/spec/mini-cli/backend/quality-guidelines.md", "reason": "契约测试写法与禁止清单"}
+{"file": ".trellis/spec/mini-host/frontend/index.md", "reason": "react 模板与管理中心同栈的技术栈口径（React 19 + Vite 7、否决中后台库）"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "三条闸门与验收纪律"}
+{"file": "docs/post-mvp-plan.md", "reason": "P1.3 原文：缺省 minimal 保 30 秒承诺、Host 不加特例、验收标准"}

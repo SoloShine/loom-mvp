@@ -3,12 +3,12 @@ import path from "node:path";
 import { parseManifest, type Manifest } from "../../host/src/main/manifest";
 import { api, appsDir, dataDir, ensureHost, ping, repoRoot } from "./client";
 import { buildApp, needsBuild } from "./build";
-import { createApp, type UiType } from "./create";
+import { createApp, type Template, type UiType } from "./create";
 
 const HELP = `mini — Personal Mini App Host CLI
 
   mini host [--shutdown]        启动 Host(已运行则跳过);--shutdown 关闭
-  mini create <name> [--ui none|window|floating|overlay]
+  mini create <name> [--ui none|window|floating|overlay] [--template minimal|react]
   mini list                     列出 App(优先读运行中的 Host)
   mini validate <id>            校验 app.yaml 与产物(不依赖 Host)
   mini build <id>               构建 App(esbuild)
@@ -68,7 +68,7 @@ function localScan(): { id: string; name: string; ok: boolean; error?: string; c
       out.push({ id: d.name, name: d.name, ok: false, error: parsed.errors.join("; ") });
     } else {
       const sourceFiles = fs.existsSync(path.join(dir, "src"))
-        ? fs.readdirSync(path.join(dir, "src")).filter((name) => name.endsWith(".ts")).map((name) => fs.readFileSync(path.join(dir, "src", name), "utf8")).join("\n")
+        ? fs.readdirSync(path.join(dir, "src")).filter((name) => name.endsWith(".ts") || name.endsWith(".tsx")).map((name) => fs.readFileSync(path.join(dir, "src", name), "utf8")).join("\n")
         : "";
       const used = capabilityOfSource(sourceFiles);
       const declared = declaredCapabilities(parsed.manifest!);
@@ -142,8 +142,11 @@ async function cmdValidate(id: string): Promise<void> {
   if (m.entry.endsWith(".ts") && !fs.existsSync(path.join(dir, "dist", "main.js"))) {
     issues.push("缺少 dist/main.js(先 mini build)");
   }
-  if (m.ui.type !== "none" && !fs.existsSync(path.join(dir, "src", "ui.ts"))) {
-    issues.push(`ui.type=${m.ui.type} 但缺少 src/ui.ts`);
+  // ui 入口接受 .ts 或 .tsx(react 模板产物为 ui.tsx)
+  const uiSrcExists =
+    fs.existsSync(path.join(dir, "src", "ui.ts")) || fs.existsSync(path.join(dir, "src", "ui.tsx"));
+  if (m.ui.type !== "none" && !uiSrcExists) {
+    issues.push(`ui.type=${m.ui.type} 但缺少 src/ui.ts(或 ui.tsx)`);
   }
   if (m.ui.type !== "none" && !fs.existsSync(path.join(dir, "dist", "ui.js"))) {
     issues.push("缺少 dist/ui.js(先 mini build)");
@@ -279,9 +282,13 @@ async function main(): Promise<void> {
         return await cmdHost(rest);
       case "create": {
         const name = rest.find((a) => !a.startsWith("--"));
-        if (!name) die("用法: mini create <name> [--ui window]");
+        if (!name) die("用法: mini create <name> [--ui window] [--template minimal|react]");
         const ui = (argFlag(rest, "--ui") ?? "none") as UiType;
-        const dir = createApp(name, ui);
+        const template = (argFlag(rest, "--template") ?? "minimal") as Template;
+        if (template !== "minimal" && template !== "react") {
+          die(`未知模板: ${template}(可用: minimal|react)`);
+        }
+        const dir = createApp(name, ui, template);
         console.log(`已创建 ${path.relative(process.cwd(), dir)}\n下一步: mini run ${name}`);
         return;
       }

@@ -5,7 +5,7 @@ import { repoRoot } from "./client";
 
 /**
  * App build pipeline: src/main.ts → dist/main.js (node, cjs) and
- * src/ui.ts → dist/ui.js (browser, iife) when present.
+ * src/ui.ts (or src/ui.tsx) → dist/ui.js (browser, iife) when present.
  * @mini/sdk is aliased to the host repo's SDK source, so apps never
  * need to install anything before their first run.
  */
@@ -55,14 +55,21 @@ export async function buildApp(appDir: string): Promise<{ uiBuilt: boolean }> {
     sourcemap: false,
   });
 
-  const srcUi = path.join(appDir, "src", "ui.ts");
-  if (fs.existsSync(srcUi)) {
+  // ui 入口:ui.ts 优先(既有 App 不变),回退 ui.tsx(react 模板)
+  const srcUi = fs.existsSync(path.join(appDir, "src", "ui.ts"))
+    ? path.join(appDir, "src", "ui.ts")
+    : fs.existsSync(path.join(appDir, "src", "ui.tsx"))
+      ? path.join(appDir, "src", "ui.tsx")
+      : null;
+  if (srcUi) {
     await build({
       entryPoints: [srcUi],
       bundle: true,
       platform: "browser",
       format: "iife",
       target: "chrome120",
+      // .tsx(react 模板)经 react/jsx-runtime 转译;对无 JSX 的 vanilla ui.ts 是 no-op
+      jsx: "automatic",
       outfile: path.join(dist, "ui.js"),
       alias: sdkAlias(),
       logLevel: "silent",

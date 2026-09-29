@@ -330,8 +330,9 @@ setInterval(() => {
 
 function requireApp(id: string): AppEntry {
   let app = get(id);
-  if (!app) {
-    // freshly created app: the fs watcher may not have fired yet
+  if (!app || app.manifestIssues.length) {
+    // App 刚创建(watcher 未及触发)或 issues 是陈旧缓存(创建后产物才构建,
+    // 例:create --ui window 后立即 mini run):重扫一次再判定,真缺产物仍会抛
     rescan();
     app = get(id);
   }

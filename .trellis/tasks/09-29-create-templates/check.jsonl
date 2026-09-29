@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/mini-cli/backend/quality-guidelines.md", "reason": "检查 minimal 输出逐字节不变、无 process.exit、契约覆盖"}
+{"file": ".trellis/spec/mini-cli/backend/command-pattern.md", "reason": "检查 create 产出与 PRD §3 结构、能力 lint 泛化正确"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "npm test 闸门与验证纪律"}
+{"file": "docs/post-mvp-plan.md", "reason": "P1.3 验收原文（两模板 <30s、react 过 validate、Host 零特例）"}

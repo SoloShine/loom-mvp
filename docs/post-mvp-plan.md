@@ -63,6 +63,8 @@ MVP 已判卷(2026-09-28,9/10 §21 指标达标,见 `docs/acceptance-record.md`)
 - **边界**:Host 构建管线只认 esbuild 产物 `dist/main.js`,react 模板的 UI 构建是 App 自有 package.json 的事,Host 不加任何特例。
 - **验收**:两条模板各自 create → run → invoke ping <30 秒;react 模板样例过 `mini validate`。
 
+**P1.3 实施记录(2026-09-29 完成,Trellis 任务 09-29-create-templates)**:`mini create --template minimal|react` 落地(缺省 minimal,输出经旧版双实现比对逐字节一致);react 模板 = React 19 + Vite 7(app.yaml 声明 ui.devUrl:5174,vite 仅 dev server),生产 ui.js 统一走 mini build 的 esbuild(ui 入口接受 .tsx + jsx:automatic,能力 lint 覆盖 .tsx)——与 roadmap「App 自有 build 脚本产 IIFE」的偏移及理由见任务 design.md 取舍表。create 内联 npm install(npmmirror)。验收期修两真问题:react 模板误含 @mini/sdk 假依赖致 install 404;既有 bug requireApp 不重扫陈旧 manifestIssues(带 ui 的新 App 立即 run 必误报,已自愈)。真机:minimal 681ms / react 5.7s(含 install) 全周期,React 产物 UI + HMR + 回退全过。UI 线(P1)至此收官。
+
 ## P2:平台能力第二层
 
 每项独立交付,按痛点排序;均给验收信号,不预支实现细节以外的承诺。
