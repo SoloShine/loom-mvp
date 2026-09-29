@@ -99,3 +99,26 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: P2.2 通知 onClick 交互化
+<!-- trellis-session: v=2 fp=3127f26238a6f83a -->
+
+**Date**: 2026-09-29
+**Task**: P2.2 通知 onClick 交互化
+**Package**: mini-host
+**Branch**: `main`
+
+### Summary
+
+走完整 Trellis 流程落地 roadmap P2.2:host.notification.show 增加可选 clickCommand(必须为清单声明命令,show 时即校验,SDK 中文拒绝),点击按 invoke 全语义分发(自动启动/活跃/history)+ focusApp 唤起面板;分发回调 manager 注入(setNotificationClickDispatcher,setWindowActivityHook 同款破环),click 回调异常全吞;校验器抽 electron-free notificationClick.ts 契约测试三分支。验收载体用户定调 file-organizer 确定性流程(storage 预置 lastDir),不用连连看。真机:user 人肉点击双侧通过——File Organizer 通知点击→invoke show success(history 实录)+面板弹出;clipboard-tool 对照无副作用。经验:专注模式把 toast 横幅压成 0 高度窗口(无 a11y 内容),通知中心行 AXPress=展开非激活,toast 物理点击是唯一无法自动化的验收环节。45/45 测试、smoke 5/5、既有四 App 通知行为零差异。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e115245` | feat(host): interactive notifications via clickCommand (P2.2, post-mvp roadmap) |
+
+### Status
+
+[OK] **Completed**
