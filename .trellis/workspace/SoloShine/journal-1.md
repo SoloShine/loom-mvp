@@ -53,3 +53,26 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: P1.3 mini create 模板(minimal|react),UI 线收官
+<!-- trellis-session: v=2 fp=8a65023aedb57b21 -->
+
+**Date**: 2026-09-29
+**Task**: P1.3 mini create 模板(minimal|react),UI 线收官
+**Package**: mini-host
+**Branch**: `main`
+
+### Summary
+
+走完整 Trellis 流程落地 roadmap P1.3:--template minimal|react(缺省 minimal 逐字节不变,旧版双实现机械比对);react 模板 React 19+Vite 7、app.yaml 声明 ui.devUrl:5174,vite 仅 dev server,生产 ui.js 统一 mini build esbuild(.tsx+jsx:automatic,对 roadmap 原文的偏移已获批);CLI 泛化(ui.tsx 入口、能力 lint 覆盖 tsx);create 内联 npm install。验收期修两真问题:react 模板误含 @mini/sdk 假依赖致 install 404;既有 host bug requireApp 不重扫陈旧 manifestIssues(带窗口新 App 立即 run 必误报缺产物,已自愈)。真机:minimal 681ms/react 5.7s 含 install 全周期,React 产物 UI+ping/pong+HMR+回退全过;41/41 测试。roadmap P1(UI 线)三项全部收官,下一步 P2 平台能力层五项。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7930a73` | feat(cli): mini create --template minimal\|react (P1.3, post-mvp roadmap) |
+
+### Status
+
+[OK] **Completed**
