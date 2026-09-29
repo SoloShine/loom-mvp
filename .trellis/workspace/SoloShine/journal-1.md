@@ -76,3 +76,26 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: P2.1 窗口几何持久化
+<!-- trellis-session: v=2 fp=0563c6f3e24460b9 -->
+
+**Date**: 2026-09-29
+**Task**: P2.1 窗口几何持久化
+**Package**: mini-host
+**Branch**: `main`
+
+### Summary
+
+走完整 Trellis 流程落地 roadmap P2 首项:AppMeta.winBounds(DIP,moved/resized+500ms 防抖,最大化/最小化不写,win.destroy 不发 close 故不靠关闭钩子);恢复经 electron-free services/winBounds.ts 可见性校验(零相交回退默认+日志,部分越界钳回工作区,≥64×48 可见);仅 manifest 窗口持久化,SDK 动态窗口零变化。trellis-check PASS(六断言数学独立复算)。验收期修两真问题:①create→立即 mini run 竞态——controlChannel GET/POST 预检查 registry 缓存 404/TypeError,加 rescan 自愈(实测 462ms 一次成功);②Electron 跨 scale 显示器一次性 setBounds 宽高按 targetScale/primaryScale 缩放(480×320→320×213 实测),恢复拆先移动后 setSize 绕开。观测器教训:list-windows.ps1 是 DPI-unaware 虚拟化坐标(各屏物理÷该屏 scale),已连同跨屏 setBounds 怪癖记入 windows-pitfalls。真机五项全过:真实拖拽保存/同屏精确恢复/副屏恢复/过期坐标(5000,5000)回退+日志/最小化停启正常;44/44 测试、smoke 5/5。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a1e49af` | feat(host): persist app window bounds across restarts (P2.1, post-mvp roadmap) |
+
+### Status
+
+[OK] **Completed**
