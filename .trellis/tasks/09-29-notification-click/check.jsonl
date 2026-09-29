@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "检查不传 clickCommand 的调用点零差异、回调不向顶层抛"}
+{"file": ".trellis/spec/mini-host/backend/platform-services.md", "reason": "检查无 manager↔core 导入环（注入模式）、dispatcher 口径与 invoke 一致"}
+{"file": ".trellis/spec/sdk/backend/api-surface.md", "reason": "检查 SDK 签名只增、JSDoc、三处同步"}
+{"file": "docs/post-mvp-plan.md", "reason": "P2.2 验收原文（面板唤起/未声明无副作用）"}

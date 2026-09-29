@@ -5,6 +5,10 @@
 `host.log / host.storage / host.clipboard / host.files / host.screen / host.mouse /
 host.keyboard / host.hotkey / host.window / host.notification / host.process / host.ui / host.app`
 
+- `notification.show({title, body?, clickCommand?})`：clickCommand 必须是清单 commands
+  声明的命令 id（show 时校验，拒绝中文报错）；点击按 invoke 语义分发并唤起面板；
+  不传则点击无副作用。不做事件订阅式 onClick（通知寿命 > App 运行周期，命令分发无状态）。
+
 - 每个方法一行 `call(service, method, args)`，不包业务逻辑；
   例外是 `process.spawn`（包装 handleId → SpawnHandle）与 `hotkey.register`
   （注册成功后本地 subscribe 回调）。

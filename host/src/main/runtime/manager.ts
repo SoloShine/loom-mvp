@@ -9,7 +9,7 @@ import * as state from "../state";
 import * as hotkeys from "../services/hotkeys";
 import * as windows from "../services/windows";
 import * as processSvc from "../services/processSvc";
-import { notificationApi } from "../services/core";
+import { notificationApi, setNotificationClickDispatcher } from "../services/core";
 import * as history from "../history";
 import { recordUse } from "../registry";
 
@@ -295,6 +295,18 @@ export function touchActivity(id: string): void {
   if (runs.has(id)) lastActivity.set(id, Date.now());
 }
 windows.setWindowActivityHook(touchActivity);
+
+// 通知 click 分发(破 manager↔core 环,回调注入同 setWindowActivityHook 先例):
+// 按 invoke 全语义执行清单声明命令(自动启动/计入活跃/history)+ 唤起面板;
+// invoke 失败仅 warn,不阻断 focusApp。
+setNotificationClickDispatcher(async (appId, command) => {
+  try {
+    await invoke(appId, command);
+  } catch (e) {
+    logHost("warn", `通知 click 命令失败 (app=${appId}, command=${command}): ${String(e)}`);
+  }
+  windows.focusApp(appId);
+});
 
 const IDLE_CHECK_INTERVAL_MS = 30_000;
 setInterval(() => {

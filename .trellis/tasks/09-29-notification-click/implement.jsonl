@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/mini-host/backend/platform-services.md", "reason": "dispatcher 服务模式、加新 host.* 能力清单、防循环导入（回调注入先例 setWindowActivityHook）"}
+{"file": ".trellis/spec/mini-host/backend/manifest-and-lifecycle.md", "reason": "invoke 语义（自动启动/活跃/history）与 manager 注入点边界"}
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "错误处理纪律（通知 click 回调不得向顶层抛）、日志插桩"}
+{"file": ".trellis/spec/sdk/backend/api-surface.md", "reason": "SDK 签名只增不改、JSDoc 标注语义、与 dispatcher/core 三处同步"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "契约测试写法与三条闸门"}
+{"file": "docs/post-mvp-plan.md", "reason": "P2.2 原文：click 接线、映射清单命令、未声明纯展示、验收（面板唤起/无副作用）"}

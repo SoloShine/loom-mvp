@@ -138,6 +138,21 @@ test('sanitizeRestoredBounds keeps visible bounds, clamps partial ones, rejects 
   );
 });
 
+test('validateClickCommand accepts declared ids, rejects unknown ones, ignores non-strings', () => {
+  const { validateClickCommand } = load('services/notificationClick.ts');
+  // 合法:在声明列表内 → null
+  assert.equal(validateClickCommand('show', ['preview', 'execute', 'show']), null);
+  // 未声明:返回中文错误文案,含命令 id
+  const invalid = validateClickCommand('shwo', ['preview', 'execute']);
+  assert.equal(typeof invalid, 'string');
+  assert.match(invalid, /未在清单命令中声明/);
+  assert.match(invalid, /shwo/);
+  // 非字符串(number/undefined/null):此层不拒——dispatcher 只透传规整后的 string
+  assert.equal(validateClickCommand(42, ['show']), null);
+  assert.equal(validateClickCommand(undefined, ['show']), null);
+  assert.equal(validateClickCommand(null, ['show']), null);
+});
+
 test('state winBounds round-trips via setWinBounds and survives a fresh process', () => {
   const { spawnSync } = require('node:child_process');
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-winbounds-'));

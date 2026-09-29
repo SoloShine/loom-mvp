@@ -89,6 +89,7 @@ async function execute() {
     await host.notification.show({
       title: "File Organizer",
       body: `已移动 ${result.moved} 个文件到 ${summary}${result.skipped.length + result.failed.length ? `,跳过 ${result.skipped.length + result.failed.length} 个` : ""}`,
+      clickCommand: "show",
     }).catch(() => false);
   }
   await scan();
@@ -125,6 +126,10 @@ export async function invoke(command: string) {
   if (command === "execute") {
     const result = await execute();
     return { moved: result.moved, skipped: result.skipped.length, failed: result.failed.length };
+  }
+  if (command === "show") {
+    await host.window.focusSelf();
+    return null;
   }
   throw new Error(`Unknown command: ${command}`);
 }

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { paths } from "../config";
 import { logHost } from "../logging";
+import { validateClickCommand } from "./notificationClick";
 
 // --- clipboard ------------------------------------------------------------
 
@@ -149,10 +150,34 @@ export const storageApi = {
 
 // --- notification ------------------------------------------------------------
 
+// 通知 click 的分发回调由 manager 启动时注入(同 setWindowActivityHook 先例):
+// core 不能 import manager(manager → dispatcher → core 成环)。
+let clickDispatcher: ((appId: string, command: string) => Promise<void>) | null = null;
+
+export function setNotificationClickDispatcher(fn: (appId: string, command: string) => Promise<void>): void {
+  clickDispatcher = fn;
+}
+
 export const notificationApi = {
-  show(opts: { title: string; body?: string }): boolean {
+  show(opts: { appId: string; title: string; body?: string; clickCommand?: string; declaredCommands: string[] }): boolean {
+    // 校验不依赖系统是否支持通知:拼写错在任何平台上都当场经 SDK promise 拒绝
+    if (opts.clickCommand !== undefined) {
+      const invalid = validateClickCommand(opts.clickCommand, opts.declaredCommands);
+      if (invalid) throw new Error(invalid);
+    }
     if (!Notification.isSupported()) return false;
-    new Notification({ title: opts.title, body: opts.body ?? "" }).show();
+    const notification = new Notification({ title: opts.title, body: opts.body ?? "" });
+    if (opts.clickCommand) {
+      const command = opts.clickCommand;
+      notification.on("click", () => {
+        // 通知留在通知中心,点击可能发生在任意时刻(App 或已 stop/重启);
+        // 分发失败绝不能向主进程顶层抛,这里整体吞掉(注入侧已自带 warn 日志)。
+        try {
+          void clickDispatcher?.(opts.appId, command).catch(() => {});
+        } catch { /* 通知点击不得影响 Host 进程 */ }
+      });
+    }
+    notification.show();
     return true;
   },
 };

@@ -11,6 +11,8 @@ commands:
     title: Scan directory and preview the plan
   - id: execute
     title: Execute the last previewed plan
+  - id: show
+    title: Show panel
 permissions:
   - files
   - storage

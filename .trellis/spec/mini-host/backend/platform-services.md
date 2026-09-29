@@ -23,7 +23,7 @@ dispatch(ctx: ServiceCtx, service: string, method: string, args: any): Promise<u
 | log | dispatcher 内联 | 落 `logs/apps/<appId>.log`，级别 info/warn/error |
 | storage | core.ts | 按 appId 命名空间隔离；磁盘优先于缓存；损坏文件 `.corrupt-*` 隔离 |
 | files | core.ts | `files.move/copy` 无覆盖语义：目标存在即失败，跨卷走 copy+verify 链 |
-| clipboard / notification | core.ts | 直通 Electron API；通知 onClick 交互化是 roadmap P2 |
+| clipboard / notification | core.ts | 直通 Electron API；notification.show 可选 `clickCommand`（必须为清单声明命令，show 时校验）→ 点击按 invoke 全语义分发 + focusApp 唤起面板；分发回调由 manager 注入（`setNotificationClickDispatcher`，防环），click 回调内一切异常吞掉不得向主进程顶层抛 |
 | screen | screen.ts | **物理像素收口**：`physicalOrigin`(×主屏 scale) + `physicalRect`；`selectRegion` = ms-screenclip + 剪贴板取图 + locate-region.py 模板匹配；截屏必须在弹出截图工具之前完成 |
 | mouse / keyboard | input.ts | 经 `input-helper.ps1`（SetProcessDpiAwarenessContext(-4)）；waitClick 提供零换算选区 |
 | hotkeys | hotkeys.ts | `registerWithRetry`（unregister 异步释放）；本机 Ctrl+Shift+L / Ctrl+Alt+L 被系统占用 |

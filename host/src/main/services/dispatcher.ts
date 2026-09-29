@@ -1,4 +1,5 @@
 import * as logging from "../logging";
+import * as registry from "../registry";
 import { clipboardApi, filesApi, notificationApi, storageApi } from "./core";
 import { screenApi } from "./screen";
 import { keyboardApi, mouseApi } from "./input";
@@ -164,7 +165,18 @@ export async function dispatch(
 
     case "notification":
       if (method === "show") {
-        return notificationApi.show({ title: String(args?.title ?? ctx.appId), body: args?.body });
+        // 点击命令与 invoke 的 command 校验同口径:string、非空、≤80,否则按未传处理
+        const clickCommand =
+          typeof args?.clickCommand === "string" && args.clickCommand.length > 0 && args.clickCommand.length <= 80
+            ? args.clickCommand
+            : undefined;
+        return notificationApi.show({
+          title: String(args?.title ?? ctx.appId),
+          body: args?.body,
+          appId: ctx.appId,
+          clickCommand,
+          declaredCommands: (registry.get(ctx.appId)?.manifest.commands ?? []).map((c) => c.id),
+        });
       }
       break;
   }

@@ -67,6 +67,8 @@ MVP 已判卷(2026-09-28,9/10 §21 指标达标,见 `docs/acceptance-record.md`)
 
 ## P2:平台能力第二层
 
+**P2.2 通知交互化 实施记录(2026-09-29 完成,Trellis 任务 09-29-notification-click)**:`host.notification.show` 增加可选 `clickCommand`(必须为清单声明命令,show 时即校验);点击按 invoke 全语义分发(自动启动/活跃/history)+ focusApp 唤起面板;回调经 manager 注入(破 manager↔core 环,setWindowActivityHook 同款);未声明维持纯展示。验收载体用户定调用 file-organizer(确定性流程,storage 预置 lastDir),不用连连看(环境随机);真机人肉点击双侧通过(File Organizer 点击→面板弹出+invoke show 入 history;clipboard-tool 无点击行为)。经验:专注模式抑制横幅(高度 0),toast 物理点击无法自动化,需人肉。
+
 **P2.1 窗口几何持久化 实施记录(2026-09-29 完成,Trellis 任务 09-29-win-bounds-persist)**:`AppMeta.winBounds`(DIP,moved/resized+500ms 防抖保存,最大化/最小化不写);恢复经纯函数 `services/winBounds.ts` 可见性校验(零相交回退默认+日志,部分越界钳回工作区);仅 manifest 窗口持久化,SDK 动态窗口路径不变。验收期修两真问题:controlChannel create→run 竞态(重扫自愈)、Electron 跨 scale 一次性 setBounds 尺寸缩放怪癖(拆移动+定尺寸)。44/44 测试、smoke 5/5、真机同屏/跨屏/过期坐标/最小化全过。
 
 每项独立交付,按痛点排序;均给验收信号,不预支实现细节以外的承诺。

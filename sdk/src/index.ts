@@ -250,7 +250,13 @@ export const host = {
   },
 
   notification: {
-    show: (opts: { title: string; body?: string }) => call("notification", "show", opts),
+    /**
+     * 系统通知。点击通知时按 invoke 语义分发清单声明的命令并唤起面板;
+     * 未声明 clickCommand 的通知点击无副作用。clickCommand 必须是清单 commands
+     * 里声明的命令 id,show 时即校验(未声明 → promise 拒绝,中文错误)。
+     */
+    show: (opts: { title: string; body?: string; clickCommand?: string }) =>
+      call("notification", "show", opts),
   },
 
   process: {
