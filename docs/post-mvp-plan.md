@@ -46,6 +46,8 @@ MVP 已判卷(2026-09-28,9/10 §21 指标达标,见 `docs/acceptance-record.md`)
 - **通道不变**:preload 桥沿用 `mini:launcher:*` 现有五条消息;`ui/src/mocks.ts` 补 Launcher 假数据以支持纯浏览器开发。
 - **验收**:fuzzy 搜索命中与排序、暗/亮主题、真机热键唤起体感 <300ms、回退路径可用。
 
+**实施记录(2026-09-28 完成,commit f4400dd,Trellis 任务 09-28-launcher-react)**:ui/ 第二遍 Vite 构建(`vite.config.launcher.ts`,Rollup iife 不支持多入口故两遍)→ `build.mjs` 归一化抽 `normalizeHtml()` 逐页断言 → `host/dist/launcher/index.html`;交互按本节原文落地(分组/相关度/键盘/错误条/演示模式/主题复用)。host 侧零改动(preload、主进程、原生回退页冻结)。闸门:`npm test` 35/35、回退演练过、ui tsc 干净;真机热键唤起、搜索过滤、状态保留(hideApp 语义)已实测。遗留:P1.2 需先给 LauncherApp 的 onError/onRefresh effect 加清理(dev 热更下会双监听,见任务 implement.md)。
+
 ### 1.2 dev 模式 UI 热更新
 
 - **设计**:manifest `ui` 节新增可选 `devUrl`;`mini dev` 检测到 devUrl 且该地址可达 → App 窗口 `loadURL(devUrl)` 而非加载打包文件;dev server 不在 → 自动回退产物并在日志提示。产线路径完全不动。
