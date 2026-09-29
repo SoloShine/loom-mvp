@@ -73,7 +73,18 @@
 
 - `scripts/hotkey-probe.js`：探测组合键是否被系统占用（本机 Ctrl+Shift+L / Ctrl+Alt+L 被占）。
 - `scripts/list-windows.ps1`：EnumWindows + IsWindowVisible，核验"窗口看不见"类问题。
+  **注意其坐标是 DPI-unaware 虚拟化值（各屏物理 ÷ 该屏 scale），不是物理像素**——
+  与 Electron 物理 bounds / a11y 物理值对不上时先换算再比对，别误判回归。
 - `host/src/main/services/input-helper.ps1` 的 diag：setCursorPos/sendInput 返回值 + 光标回读，
   诊断鼠标注入链路。
 - `logs/host.log` 是第一现场：preload 探针（`mini:preload-loaded`）、ownership 守卫、
   生命周期/异常都插桩在这里。
+
+## Electron 多显示器 DPI 窗口几何
+
+- **跨不同 scale 显示器的一次性 `setBounds` 会把宽高按 targetScale/oldScale 缩放**
+  （实测主屏 1.5 → 副屏 1.0 时 480×320 落成 320×213 物理，x/y 不受影响；同屏往返精确）。
+  跨屏恢复/摆放几何一律拆「先 `setBounds({x,y})` 移动、窗口落到目标屏后 `setSize(w,h)`」，
+  见 `windows.ts` 的 winBounds 恢复分支。
+- 窗口几何持久化全程用 Electron DIP（getBounds/setBounds/display.workArea 同空间往返），
+  不做物理换算；物理值只出现在对外 API 与 helper。

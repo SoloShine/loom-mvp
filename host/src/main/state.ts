@@ -4,12 +4,20 @@ import crypto from "node:crypto";
 import { paths } from "./config";
 import { logHost } from "./logging";
 
+export interface WinBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 export interface AppMeta {
   enabled: boolean;
   favorite: boolean;
   addedAt: string;
   lastUsedAt?: string;
   useCount: number;
+  /** 上次正常状态的窗口几何(DIP)。最大化/最小化期间不写入。 */
+  winBounds?: WinBounds;
 }
 export interface RecycleSettings {
   /** 总开关。关闭时清单声明也不生效。 */
@@ -56,6 +64,15 @@ export function atomicWrite(file: string, value: string): void {
 function object(v: unknown): v is Record<string, unknown> { return !!v && typeof v === "object" && !Array.isArray(v); }
 function validId(id: string): boolean { return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(id); }
 export { validId };
+/** 宽松形状校验:只挡结构性垃圾(非对象/非有限数/宽高 <1);越界但有限的坐标是
+ *  布局过期的合法值,由消费端(winBounds 可见性钳制)处理,不在此拒绝。 */
+function validWinBounds(v: unknown): boolean {
+  if (!object(v)) return false;
+  const b = v as Record<string, unknown>;
+  return Number.isFinite(b.x as number) && Number.isFinite(b.y as number) &&
+    Number.isFinite(b.width as number) && Number.isFinite(b.height as number) &&
+    (b.width as number) >= 1 && (b.height as number) >= 1;
+}
 function validSettings(s: unknown): s is Settings {
   if (!object(s)) return false;
   const r: unknown = s.recycle;
@@ -85,7 +102,8 @@ function validate(s: unknown): asserts s is State {
   for (const [id, meta] of Object.entries(s.apps)) {
     if (!validId(id) || !object(meta) || typeof meta.enabled !== "boolean" || typeof meta.favorite !== "boolean" ||
       typeof meta.addedAt !== "string" || (meta.lastUsedAt !== undefined && typeof meta.lastUsedAt !== "string") ||
-      !Number.isSafeInteger(meta.useCount) || (meta.useCount as number) < 0) throw new Error(`host-state App 元数据无效: ${id}`);
+      !Number.isSafeInteger(meta.useCount) || (meta.useCount as number) < 0 ||
+      (meta.winBounds !== undefined && !validWinBounds(meta.winBounds))) throw new Error(`host-state App 元数据无效: ${id}`);
   }
 }
 function backup(file: string): string {
@@ -169,4 +187,10 @@ export function recordUse(id: string): void {
   try {
     update((s) => { const m = s.apps[id] ?? { enabled: true, favorite: false, addedAt: new Date().toISOString(), useCount: 0 }; m.lastUsedAt = new Date().toISOString(); m.useCount++; s.apps[id] = m; });
   } catch (e) { logHost("warn", `最近使用写入失败 ${id}: ${String(e)}`); }
+}
+export function setWinBounds(id: string, bounds: WinBounds): void {
+  if (!validId(id)) throw new Error(`无效 App id: ${id}`);
+  try {
+    update((s) => { const m = s.apps[id] ?? { enabled: true, favorite: false, addedAt: new Date().toISOString(), useCount: 0 }; m.winBounds = { ...bounds }; s.apps[id] = m; });
+  } catch (e) { logHost("warn", `窗口几何写入失败 ${id}: ${String(e)}`); }
 }

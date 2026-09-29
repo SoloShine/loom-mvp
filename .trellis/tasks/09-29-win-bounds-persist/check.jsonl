@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "检查 persist=false 主路径零行为变化、写失败容错（不抛出影响生命周期）"}
+{"file": ".trellis/spec/mini-host/backend/manifest-and-lifecycle.md", "reason": "检查 state validate 变更只增不改、损坏旁路路径不回归"}
+{"file": ".trellis/spec/guides/windows-pitfalls.md", "reason": "检查无物理/DIP 换算混用、isDestroyed 守卫"}
+{"file": "docs/post-mvp-plan.md", "reason": "P2 验收口径（恢复/钳制/回退）"}

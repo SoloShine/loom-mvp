@@ -1,11 +1,13 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { paths } from "../config";
 import { logHost } from "../logging";
 import * as registry from "../registry";
+import * as state from "../state";
 import type { AppEntry } from "../registry";
 import { resolveDevTarget } from "./devTarget";
+import { sanitizeRestoredBounds } from "./winBounds";
 
 /**
  * Mini App windows. One primary window per manifest ui declaration
@@ -16,6 +18,8 @@ import { resolveDevTarget } from "./devTarget";
 
 const windowsByApp = new Map<string, Map<string, BrowserWindow>>();
 const appByWebContents = new Map<number, string>();
+// 窗口几何防抖保存的挂起 timer,按 windowId 存,窗口 closed 时清理。
+const saveTimers = new Map<string, NodeJS.Timeout>();
 let seq = 0;
 
 function windowOptions(type: string, width: number, height: number): Electron.BrowserWindowConstructorOptions {
@@ -79,6 +83,9 @@ function trackWindow(appId: string, windowId: string, win: BrowserWindow): void 
   appByWebContents.set(webContentsId, appId);
   win.on("closed", () => {
     // 注意:closed 触发时窗口已销毁,不能再访问 win.webContents
+    const pending = saveTimers.get(windowId);
+    if (pending) clearTimeout(pending);
+    saveTimers.delete(windowId);
     m!.delete(windowId);
     appByWebContents.delete(webContentsId);
     logHost("info", `window closed (app=${appId}, id=${windowId})`);
@@ -106,7 +113,7 @@ export function createAppWindow(app: AppEntry): string {
   const ui = app.manifest.ui;
   const width = ui.width ?? 360;
   const height = ui.height ?? 240;
-  return createWindow(app.id, ui.type === "none" ? "window" : ui.type, width, height, app.name);
+  return createWindow(app.id, ui.type === "none" ? "window" : ui.type, width, height, app.name, true);
 }
 
 export function createWindow(
@@ -115,6 +122,8 @@ export function createWindow(
   width: number,
   height: number,
   title?: string,
+  // 仅 manifest 窗口持久化几何;SDK 动态窗口(默认 false)生命周期由 App 自管,行为不变。
+  persist = false,
 ): string {
   const win = new BrowserWindow({
     ...windowOptions(type, width, height),
@@ -125,6 +134,36 @@ export function createWindow(
   const app = { distDir: path.join(paths.apps, appId, "dist") } as AppEntry;
   const shell = ensureShellHtml(app);
   const devUrl = registry.get(appId)?.manifest.ui.devUrl;
+  if (persist) {
+    // 恢复:上次的几何过可见性校验后应用(全程 DIP,不换算);过期/不可见回退默认。
+    const saved = state.meta(appId)?.winBounds;
+    const displays = screen.getAllDisplays().map((d) => ({ workArea: d.workArea }));
+    const fixed = saved ? sanitizeRestoredBounds(saved, displays) : null;
+    if (fixed) {
+      // Electron 跨不同 scale 显示器的一次性 setBounds 会把宽高按
+      // targetScale/oldScale 缩放(实测 1.5→1.0 宽高缩成 2/3,x/y 不受影响):
+      // 先移动、窗口落到目标屏后再定尺寸,绕开一次性跨屏换算
+      win.setBounds({ x: fixed.x, y: fixed.y });
+      win.setSize(fixed.width, fixed.height);
+    }
+    if (saved && !fixed) logHost("info", `winBounds 不可见,回退默认位置 (app=${appId})`);
+    // 保存:用户移动/缩放结束后 500ms 防抖全量重写。win.destroy() 不发 close,
+    // 不能靠关闭钩子存盘;最大化/最小化期间 getBounds 是铺满/怪值,直接丢弃。
+    const scheduleSave = (): void => {
+      const prev = saveTimers.get(windowId);
+      if (prev) clearTimeout(prev);
+      saveTimers.set(windowId, setTimeout(() => {
+        saveTimers.delete(windowId);
+        try {
+          if (!win.isDestroyed() && !win.isMaximized() && !win.isMinimized()) state.setWinBounds(appId, win.getBounds());
+        } catch (e) {
+          logHost("warn", `窗口几何保存失败 (app=${appId}): ${String(e)}`);
+        }
+      }, 500));
+    };
+    win.on("moved", scheduleSave);
+    win.on("resized", scheduleSave);
+  }
   // 加载决策放后台:窗口 show:false,ready-to-show 才上屏,探测不影响可见性;
   // 未声明 devUrl 的 App 不探测,仍走产物 loadFile,行为同前。
   void (async () => {

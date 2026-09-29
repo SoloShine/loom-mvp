@@ -133,12 +133,22 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return json(res, 200, { ok: true, data: { lines: lines.slice(cursor, cursor + limit).map((line) => line.slice(0, 2048)), nextCursor: cursor + limit < lines.length ? cursor + limit : null, truncated: start > 0 } });
     }
     if (req.method === "GET" && parts.length === 2) {
-      const entry = registry.list().find((e) => e.id === id);
+      let entry = registry.list().find((e) => e.id === id);
+      if (!entry) {
+        // 刚 create 的 App 可能还没被 fs watcher 扫到:重扫一次再判定(与 manager.requireApp 同款自愈)
+        registry.rescan();
+        entry = registry.list().find((e) => e.id === id);
+      }
       if (!entry) return json(res, 404, { ok: false, code: "NOT_FOUND", error: `未知 App: ${id}` });
       return json(res, 200, { ok: true, app: appToApi(entry) });
     }
     if (req.method !== "POST") return json(res, 405, { ok: false, code: "INVALID_ARGUMENT", error: "method not allowed" });
-    const found = registry.list().find((e) => e.id === id)!;
+    let found = registry.list().find((e) => e.id === id);
+    if (!found) {
+      registry.rescan();
+      found = registry.list().find((e) => e.id === id);
+    }
+    if (!found) return json(res, 404, { ok: false, code: "NOT_FOUND", error: `未知 App: ${id}` });
     if (registry.isBroken(found)) return json(res, 409, { ok: false, code: "BROKEN_MANIFEST", error: found.error });
     if (!found.enabled && ["start", "reload", "invoke"].includes(action)) return json(res, 409, { ok: false, code: "APP_DISABLED", error: `App ${id} 已禁用` });
     if (!["start", "stop", "reload", "focus", "enable", "disable", "favorite", "unfavorite", "invoke"].includes(action)) return json(res, 400, { ok: false, code: "INVALID_ARGUMENT", error: `未知动作: ${action}` });

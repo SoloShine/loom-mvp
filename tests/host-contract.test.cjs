@@ -102,3 +102,79 @@ test('resolveDevTarget picks dev only when devUrl declared and probe reachable',
   assert.equal(await resolveDevTarget('http://localhost:5173', async () => false), 'artifact');
   assert.equal(await resolveDevTarget(undefined, async () => { throw new Error('probe must not be called'); }), 'artifact');
 });
+
+test('sanitizeRestoredBounds keeps visible bounds, clamps partial ones, rejects invisible ones', () => {
+  const { sanitizeRestoredBounds } = load('services/winBounds.ts');
+  const big = { x: 0, y: 0, width: 2560, height: 1440 };
+  const wa = { x: 0, y: 0, width: 1920, height: 1080 };
+  // 完全可见:原样返回并取整(x∈[-336,2496]、y∈[-252,1392] 均不触界)
+  assert.deepEqual(
+    sanitizeRestoredBounds({ x: 100.4, y: 200.6, width: 400, height: 300 }, [{ workArea: big }]),
+    { x: 100, y: 201, width: 400, height: 300 },
+  );
+  // 部分越界:可见部分不足 64×48 时钳回边界(x=-350 只露 50 → -336;y=-280 只露 20 → -252)
+  assert.deepEqual(
+    sanitizeRestoredBounds({ x: -350, y: -280, width: 400, height: 300 }, [{ workArea: wa }]),
+    { x: -336, y: -252, width: 400, height: 300 },
+  );
+  // 零相交(显示器拔了/坐标完全过期)→ null,调用方回退默认位置
+  assert.equal(sanitizeRestoredBounds({ x: 5000, y: 5000, width: 400, height: 300 }, [{ workArea: big }]), null);
+  // 结构垃圾:缺字段 / 宽 0 / 非对象 / 空 displays → null
+  assert.equal(sanitizeRestoredBounds({ x: 100, y: 100, width: 400 }, [{ workArea: big }]), null);
+  assert.equal(sanitizeRestoredBounds({ x: 0, y: 0, width: 0, height: 300 }, [{ workArea: big }]), null);
+  assert.equal(sanitizeRestoredBounds('junk', [{ workArea: big }]), null);
+  assert.equal(sanitizeRestoredBounds({ x: 0, y: 0, width: 400, height: 300 }, []), null);
+  // 超大宽高钳到 workArea 尺寸(4000×2000 → 1920×1080),x/y 仍在合法区间
+  assert.deepEqual(
+    sanitizeRestoredBounds({ x: -100, y: 50, width: 4000, height: 2000 }, [{ workArea: wa }]),
+    { x: -100, y: 50, width: 1920, height: 1080 },
+  );
+  // 双屏取相交最大者(d2 相交 350×300 > d1 50×300):按 d2 判定 x=1870 合法;
+  // 若误选 d1 会被钳到 1856
+  const dual = [{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }, { workArea: { x: 1920, y: 0, width: 1920, height: 1080 } }];
+  assert.deepEqual(
+    sanitizeRestoredBounds({ x: 1870, y: 100, width: 400, height: 300 }, dual),
+    { x: 1870, y: 100, width: 400, height: 300 },
+  );
+});
+
+test('state winBounds round-trips via setWinBounds and survives a fresh process', () => {
+  const { spawnSync } = require('node:child_process');
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-winbounds-'));
+  const output = path.join(dir, 'state.cjs');
+  esbuild.buildSync({ entryPoints: [path.join(__dirname, '..', 'host/src/main/state.ts')], outfile: output, bundle: true, platform: 'node', format: 'cjs', external: ['electron'] });
+  const run = script => spawnSync(process.execPath, ['-e', `const s=require(${JSON.stringify(output)}); ${script}`], { env: { ...process.env, MINI_DATA_DIR: data }, encoding: 'utf8' });
+  try {
+    assert.equal(run('s.initState(); s.setWinBounds("sample",{x:10,y:20,width:300,height:200}); const m=s.meta("sample"); if(!m||m.winBounds?.x!==10||m.winBounds?.width!==300) process.exit(2);').status, 0);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(data, 'host-state.json'), 'utf8')).apps.sample.winBounds, { x: 10, y: 20, width: 300, height: 200 });
+    assert.equal(run('s.initState(); if(s.meta("sample")?.winBounds?.height!==200) process.exit(3);').status, 0);
+  } finally { fs.rmSync(data, { recursive: true, force: true }); }
+});
+
+test('invalid winBounds trips the corrupt bypass and leaves state readonly', () => {
+  const { spawnSync } = require('node:child_process');
+  const output = path.join(dir, 'state.cjs');
+  esbuild.buildSync({ entryPoints: [path.join(__dirname, '..', 'host/src/main/state.ts')], outfile: output, bundle: true, platform: 'node', format: 'cjs', external: ['electron'] });
+  const cases = [
+    ['string coordinate', { x: 'a', y: 0, width: 400, height: 300 }],
+    ['negative width', { x: 0, y: 0, width: -1, height: 300 }],
+  ];
+  for (const [label, winBounds] of cases) {
+    const data = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-winbounds-bad-'));
+    try {
+      const file = JSON.stringify({
+        schemaVersion: 1,
+        settings: { launcherHotkey: 'Ctrl+Shift+M', logRetentionDays: 14, maxLogBytesPerApp: 10485760, recycle: { enabled: false, defaultMinutes: 0, exemptAppIds: [], notify: false } },
+        apps: { sample: { enabled: true, favorite: false, addedAt: '2026-01-01T00:00:00.000Z', useCount: 0, winBounds } },
+      });
+      fs.writeFileSync(path.join(data, 'host-state.json'), file);
+      const run = script => spawnSync(process.execPath, ['-e', `const s=require(${JSON.stringify(output)}); ${script}`], { env: { ...process.env, MINI_DATA_DIR: data }, encoding: 'utf8' });
+      // 加载即旁路:默认只读状态,元数据为空;同进程内 setWinBounds 走 warn 不抛、不写入
+      const script = 's.initState(); if(s.meta("sample")) process.exit(2); s.setWinBounds("sample2",{x:1,y:1,width:10,height:10}); if(s.meta("sample2")) process.exit(3);';
+      const result = run(script);
+      assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+      assert.ok(fs.readdirSync(data).some(n => n.endsWith('.corrupt')), label);
+      assert.equal(fs.existsSync(path.join(data, 'host-state.json')), false, label);
+    } finally { fs.rmSync(data, { recursive: true, force: true }); }
+  }
+});

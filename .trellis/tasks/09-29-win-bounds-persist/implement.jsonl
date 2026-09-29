@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/mini-host/backend/manifest-and-lifecycle.md", "reason": "state.ts 契约纪律：atomicWrite、先落盘再更新缓存、损坏旁路、validate 白名单式校验要同源"}
+{"file": ".trellis/spec/mini-host/backend/ipc-preload-contracts.md", "reason": "窗口生命周期语义（hide/focus/close 分层）与 closed 事件禁忌（isDestroyed 纪律）"}
+{"file": ".trellis/spec/guides/windows-pitfalls.md", "reason": "DIP/物理坐标陷阱边界（本特性全程 DIP 往返不换算）、closed 里禁碰 webContents"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "契约测试写法与三条闸门（smoke 生命周期必跑）"}
+{"file": "docs/post-mvp-plan.md", "reason": "P2 窗口几何持久化条目原文（已核实 windows.ts 无 bounds 持久化、双屏痛点）"}
