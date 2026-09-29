@@ -20,6 +20,6 @@ export const bridge: LauncherBridge =
     invokeCommand: () => demoFail<boolean>("执行命令"),
     hide: () => {},
     openManagement: () => {},
-    onError: () => {},
-    onRefresh: () => {},
+    onError: () => () => {},
+    onRefresh: () => () => {},
   };

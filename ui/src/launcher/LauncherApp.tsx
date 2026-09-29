@@ -58,8 +58,12 @@ export function LauncherApp() {
   }, []);
 
   useEffect(() => {
-    bridge.onError((message) => setError(message));
-    bridge.onRefresh(() => { void refresh(); });
+    const offError = bridge.onError((message) => setError(message));
+    const offRefresh = bridge.onRefresh(() => { void refresh(); });
+    return () => {
+      offError();
+      offRefresh();
+    };
   }, [refresh]);
 
   useEffect(() => { void refresh(); }, [refresh]);

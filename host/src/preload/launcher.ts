@@ -9,9 +9,13 @@ contextBridge.exposeInMainWorld("__launcher", {
   hide: () => ipcRenderer.send("mini:launcher:hide"),
   openManagement: () => ipcRenderer.send("mini:launcher:manage"),
   onError: (cb: (message: string) => void) => {
-    ipcRenderer.on("mini:launcher:error", (_event, message: string) => cb(message));
+    const handler = (_event: Electron.IpcRendererEvent, message: string) => cb(message);
+    ipcRenderer.on("mini:launcher:error", handler);
+    return () => ipcRenderer.removeListener("mini:launcher:error", handler);
   },
   onRefresh: (cb: () => void) => {
-    ipcRenderer.on("mini:launcher:refresh", () => cb());
+    const handler = () => cb();
+    ipcRenderer.on("mini:launcher:refresh", handler);
+    return () => ipcRenderer.removeListener("mini:launcher:refresh", handler);
   },
 });

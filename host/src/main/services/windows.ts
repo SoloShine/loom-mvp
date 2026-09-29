@@ -3,7 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { paths } from "../config";
 import { logHost } from "../logging";
+import * as registry from "../registry";
 import type { AppEntry } from "../registry";
+import { resolveDevTarget } from "./devTarget";
 
 /**
  * Mini App windows. One primary window per manifest ui declaration
@@ -122,7 +124,33 @@ export function createWindow(
   const windowId = `win-${++seq}`;
   const app = { distDir: path.join(paths.apps, appId, "dist") } as AppEntry;
   const shell = ensureShellHtml(app);
-  win.loadFile(shell, { query: { __miniWindowId: windowId } });
+  const devUrl = registry.get(appId)?.manifest.ui.devUrl;
+  // 加载决策放后台:窗口 show:false,ready-to-show 才上屏,探测不影响可见性;
+  // 未声明 devUrl 的 App 不探测,仍走产物 loadFile,行为同前。
+  void (async () => {
+    const target = await resolveDevTarget(devUrl);
+    if (win.isDestroyed()) return;
+    if (target === "dev" && devUrl) {
+      try {
+        const u = new URL(devUrl);
+        u.searchParams.set("__miniWindowId", windowId);
+        await win.loadURL(u.toString());
+        return;
+      } catch (e: any) {
+        if (win.isDestroyed()) return;
+        logHost("warn", `devUrl 加载失败,回退产物 (app=${appId}): ${e?.message ?? e}`);
+      }
+    } else if (devUrl) {
+      logHost("info", `devUrl 不可达,回退产物 (app=${appId})`);
+    }
+    try {
+      await win.loadFile(shell, { query: { __miniWindowId: windowId } });
+    } catch (e: any) {
+      // mid-load 被销毁(stop/关窗竞速)时 loadFile 会 reject,detached promise
+      // 里的 unhandled rejection 在主进程是致命的
+      if (!win.isDestroyed()) logHost("error", `window load failed (app=${appId}): ${e?.message ?? e}`);
+    }
+  })();
   win.once("ready-to-show", () => win.show());
   trackWindow(appId, windowId, win);
   logHost("info", `window created (app=${appId}, id=${windowId}, type=${type})`);

@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/mini-host/backend/manifest-and-lifecycle.md", "reason": "parseManifest 返回值模式、契约三处同步（bootstrap.cjs/manager/sdk）与契约测试纪律"}
+{"file": ".trellis/spec/mini-host/backend/ipc-preload-contracts.md", "reason": "窗口归属表与 URL 无关、sender 校验边界（App 窗口不走 controlPage 机制）"}
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "状态/日志/禁止清单（windows.ts 是主路径，未声明分支必须逐字不变）"}
+{"file": ".trellis/spec/mini-host/frontend/state-management.md", "reason": "LauncherBridge 契约改签名时与 preload 两处同步的纪律"}
+{"file": ".trellis/spec/mini-cli/backend/command-pattern.md", "reason": "cmdDev 提示行沿用 cmd* 模式与 HELP 同步规则"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "契约测试写法（esbuild→cjs→require）与三条闸门"}
+{"file": "docs/post-mvp-plan.md", "reason": "P1.2 设计边界原文（不做跨进程 HMR、dev server 不代管）与验收原文"}

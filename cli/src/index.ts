@@ -183,6 +183,13 @@ async function cmdDev(id: string): Promise<void> {
   await ensureHost();
   await api.start(id);
   console.log(`dev 模式: watching ${path.relative(repoRoot(), dir)}(Ctrl+C 退出,App 继续运行)`);
+  const yamlPath = path.join(dir, "app.yaml");
+  if (fs.existsSync(yamlPath)) {
+    const parsed = parseManifest(fs.readFileSync(yamlPath, "utf8"), path.basename(dir));
+    if (parsed.manifest?.ui.devUrl) {
+      console.log(`dev 提示: ui.devUrl=${parsed.manifest.ui.devUrl}(dev server 未起时窗口回退产物;起/停后重开窗口切换)`);
+    }
+  }
 
   let timer: NodeJS.Timeout | null = null;
   const rebuild = (file: string) => {

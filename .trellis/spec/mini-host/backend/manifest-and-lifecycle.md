@@ -5,8 +5,10 @@
 - `parseManifest(text, dirName): ParsedManifest` 返回 `{ ok, manifest?, errors[] }`，
   **校验失败靠返回值，不抛异常**；错误文案是面向用户的中文（`缺少 id`、
   ``id 非法(需 ${ID_RE}): ${id}``）。沿用这个模式：能收集的错误都收集完一次报出。
-- 字段：`id / name / version / entry / ui{type,width,height} / lifecycle? / commands / hotkeys / permissions`。
-  `ui.type ∈ none|window|floating|overlay`；`lifecycle.idleStopMinutes`（0/缺省=关）。
+- 字段：`id / name / version / entry / ui{type,width,height,devUrl?} / lifecycle? / commands / hotkeys / permissions`。
+  `ui.type ∈ none|window|floating|overlay`；`lifecycle.idleStopMinutes`（0/缺省=关）；
+  `ui.devUrl`（可选，必须 http(s) 地址）：dev server 可达时 App 窗口 loadURL 此地址接 Vite 热更，
+  不可达回退产物（`services/devTarget.ts` 的 resolveDevTarget + windows.ts 创建时探测）。
 - 硬规则：`id` 必须匹配 `^[a-z0-9][a-z0-9-]*$` 且**与目录名一致**。
   新增字段必须：manifest.ts 校验 + 相关消费者 + `tests/host-contract.test.cjs` 契约用例同步改。
 

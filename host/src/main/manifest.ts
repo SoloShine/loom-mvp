@@ -9,6 +9,8 @@ export interface UiDef {
   type: "none" | "window" | "floating" | "overlay";
   width?: number;
   height?: number;
+  /** dev 模式 UI 热更:dev server 可达时窗口 loadURL 此地址,否则回退产物 */
+  devUrl?: string;
 }
 
 export interface LifecycleDef {
@@ -67,6 +69,13 @@ export function parseManifest(text: string, dirName: string): ParsedManifest {
   };
   if (raw.ui && !UI_TYPES.includes(raw.ui.type)) {
     errors.push(`ui.type 非法: ${raw.ui.type}(应为 none/window/floating/overlay)`);
+  }
+  if (uiRaw?.devUrl != null) {
+    if (typeof uiRaw.devUrl === "string" && /^https?:\/\//.test(uiRaw.devUrl)) {
+      ui.devUrl = uiRaw.devUrl;
+    } else {
+      errors.push(`ui.devUrl 非法(需 http/https 地址): ${uiRaw.devUrl}`);
+    }
   }
 
   let lifecycle: LifecycleDef | undefined;

@@ -81,3 +81,24 @@ test('build output gives both control pages strict external-only CSP', () => {
     assert.match(html, /<link rel="stylesheet" href="\.\/.*\.css">/);
   }
 });
+
+test('manifest ui.devUrl accepts http(s) strings and rejects other schemes and types', () => {
+  const { parseManifest } = load('manifest.ts');
+  const yaml = devUrl => `id: sample\nname: 样例\nversion: 0.0.1\nentry: dist/main.js\nui:\n  type: window\n  devUrl: ${devUrl}\n`;
+  const ok = parseManifest(yaml('"http://localhost:5173"'), 'sample');
+  assert.equal(ok.ok, true);
+  assert.equal(ok.manifest.ui.devUrl, 'http://localhost:5173');
+  const badScheme = parseManifest(yaml('"ftp://x"'), 'sample');
+  assert.equal(badScheme.ok, false);
+  assert.match(badScheme.errors.join('; '), /ui\.devUrl/);
+  const badType = parseManifest(yaml('123'), 'sample');
+  assert.equal(badType.ok, false);
+  assert.match(badType.errors.join('; '), /ui\.devUrl/);
+});
+
+test('resolveDevTarget picks dev only when devUrl declared and probe reachable', async () => {
+  const { resolveDevTarget } = load('services/devTarget.ts');
+  assert.equal(await resolveDevTarget('http://localhost:5173', async () => true), 'dev');
+  assert.equal(await resolveDevTarget('http://localhost:5173', async () => false), 'artifact');
+  assert.equal(await resolveDevTarget(undefined, async () => { throw new Error('probe must not be called'); }), 'artifact');
+});

@@ -83,6 +83,6 @@ export interface LauncherBridge {
   invokeCommand(id: string, command: string): Promise<boolean>;
   hide(): void;
   openManagement(): void;
-  onError(cb: (message: string) => void): void;
-  onRefresh(cb: () => void): void;
+  onError(cb: (message: string) => void): () => void;
+  onRefresh(cb: () => void): () => void;
 }

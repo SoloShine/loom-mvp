@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "检查 windows.ts 未声明 devUrl 分支零行为变化、日志插桩到位"}
+{"file": ".trellis/spec/mini-host/backend/manifest-and-lifecycle.md", "reason": "检查 manifest 校验模式一致性（errors[] 中文、不抛异常）与契约测试覆盖"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "npm test 闸门与验证纪律"}
+{"file": "docs/post-mvp-plan.md", "reason": "P1.2 验收原文（<1s 热更、回退不白屏、产线不动）"}

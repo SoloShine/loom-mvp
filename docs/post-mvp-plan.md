@@ -54,6 +54,8 @@ MVP 已判卷(2026-09-28,9/10 §21 指标达标,见 `docs/acceptance-record.md`)
 - **边界**:只服务本机开发;file:// 产线 IIFE 机制、CSP 不变;不做跨进程完整 HMR(PRD §14 的态度:没必要为 HMR 把架构搞复杂——Vite 自身的 HMR 已覆盖 UI 局部刷新,main/runtime 仍是 reload 语义)。
 - **验收**:改一个 React App 的 tsx,窗口内 <1 秒看到变化;关掉 dev server 后窗口回退到产物且不白屏。
 
+**P1.2 实施记录(2026-09-29 完成,Trellis 任务 09-29-dev-ui-hot-reload)**:manifest `ui.devUrl`(必须 http(s) 地址)落地;窗口创建时探测(fetch 400ms,任何响应即可达),可达 `loadURL` 接 Vite 热更、不可达回退产物并记日志,loadURL 半路失败也 catch 回退(窗口永不白屏);决策函数独立在 `host/src/main/services/devTarget.ts`(electron-free,可契约测试),未声明 devUrl 的路径行为不变;preload launcher 桥 onError/onRefresh 返回退订(P1.1 遗留清理完成);`mini dev` 起动时打印 devUrl 提示。闸门:`npm test` 37/37(含 devUrl 校验与 resolveDevTarget 三分支用例);真机实测 dev 页加载、SDK 桥经 dev 源落日志、改文件秒级热更、停 server 回退产物。
+
 ### 1.3 `mini create` 模板决策
 
 - **建议**:`mini create <id> [--template minimal|react]`,默认 minimal 保持 PRD §13 的「30 秒 Hello World」承诺。
