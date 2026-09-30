@@ -122,3 +122,26 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: P2.3 会话恢复(默认关)实现与真机验收
+<!-- trellis-session: v=2 fp=dbda6952ce1cfd94 -->
+
+**Date**: 2026-09-30
+**Task**: P2.3 会话恢复(默认关)实现与真机验收
+**Package**: mini-host
+**Branch**: `main`
+
+### Summary
+
+settings.restoreSession(默认关,旧文件自动迁移);initRuns() 返回本次标 interrupted 的 appId 作为恢复依据;manager.restoreInterrupted 串行 start、逐项 restored 伴随事件(不入 TERMINAL_KINDS)、不预检由 requireApp 判定;boot 在控制通道就绪后 fire-and-forget。测试 45→48,smoke 5/5(须先 npm run build)。真机三场景:强杀重启自动恢复(截图)、APP_DISABLED 单项失败不阻塞、关开关行为不变;恢复出的 run 正常落 stop 终态。P2 仅剩内存观测层(2.5)。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fc50ccc` | feat(session): restore interrupted apps on boot behind restoreSession toggle (default off) |
+
+### Status
+
+[OK] **Completed**
