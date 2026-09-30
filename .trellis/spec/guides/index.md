@@ -25,6 +25,7 @@ These guides help you **ask the right questions before coding**.
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
 | [Windows 平台坑速查](./windows-pitfalls.md) | 本机已踩实并修复的平台事实（坐标、进程、PS1、截屏、退出码） | **任何 host/cli/helper 改动前**；"窗口打不开/点击偏移/脚本前半失效/进程泄漏"类故障先查这里 |
 | [测试与验收纪律](./testing-and-acceptance.md) | 三条质量闸门、单测写法、数据/快照纪律 | 报"完成"之前；改契约（manifest/IPC/SDK/状态文件）时 |
+| [Recipe/App 分界原则](./recipe-vs-app-boundary.md) | 新工具需求形态判定：两个可判定轴 + 语义阶梯 + 已判案例 | 接到新工具需求的第一步；想给 recipe 层加"监控/并行/持久化"等能力前 |
 
 ---
 

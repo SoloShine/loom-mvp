@@ -168,3 +168,27 @@ settings.restoreSession(默认关,旧文件自动迁移);initRuns() 返回本次
 ### Status
 
 [OK] **Completed**
+
+
+## Session 8: recipe 声明式工具层（P3 首项）立项与实现
+
+<!-- trellis-session: v=2 fp=d2bcbe67361394f5 -->
+
+**Date**: 2026-09-30
+**Task**: 09-30-recipe-layer
+**Package**: mini-host（apps/recipe-runner）
+**Branch**: `main`
+
+### Summary
+
+从「工具生产内生化」讨论立项：Quicker 参照系 → recipe 层（线性解释器）与 workflow 引擎的语义阶梯之辨 → 表现形式定为 YAML 唯一事实源 + React 单向投影（不做画布/积木编辑）→ 参数模型（取值链 override>preset>lastUsed>default、onRun、param/ask 分界）→ R6 分界原则迎来首个判例（键鼠实时映射=app、一次性宏=recipe）。实现全程零 host/cli/sdk 改动：engine 纯函数核心（注入表 dispatch）、23 host.* + 7 util + 3 ui.* 动作带 dry-run 分类、动态热键 + fs.watch 改完即生效、结构化轨迹（环形 10、4KB 截断、从第 N 步重跑）、参数表单与 ui.ask 共用 schema→form 渲染器。四个验收场景全链路过（批量重命名/剪贴板转换/键鼠宏/选区截图存档，含改一行立即生效实证）；验收期修真 bug：表单窗口泄漏（focusSelf 恒 null 触发误建窗，改 UI 存活探针）。101+49 测试、tsc 零错。R6 分界原则沉淀至 guides/recipe-vs-app-boundary.md。人工验收清单（热键真实按键、宏在真实目标的手感、selectRegion、UI 按钮目检）待用户；key-click-mapper（B 版）已记 post-mvp-plan P3.2 候选。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `099abe2` | feat(apps): recipe-runner declarative recipe layer (P3 first item, zero host diff) |
+
+### Status
+
+[进行中] 自动化验收全过，待用户人工验收后 finish/archive
