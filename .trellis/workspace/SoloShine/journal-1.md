@@ -145,3 +145,26 @@ settings.restoreSession(默认关,旧文件自动迁移);initRuns() 返回本次
 ### Status
 
 [OK] **Completed**
+
+
+## Session 7: P2.5 内存观测层实现与真机验收(P2 收官)
+<!-- trellis-session: v=2 fp=d2bcbe67361394f5 -->
+
+**Date**: 2026-09-30
+**Task**: P2.5 内存观测层实现与真机验收(P2 收官)
+**Package**: mini-host
+**Branch**: `main`
+
+### Summary
+
+管理中心详情新增内存行(memoryMB,只观测):getAppMetrics 按 pid 对号,纯函数 appMetrics.ts 双形状兼容——验收期实测发现 Electron 44 ProcessMetric.memory 实为 { workingSetSize(KB), peakWorkingSetSize, privateBytes },旧文档 workingSetMB 形状不存在,合成数据契约测试曾测绿错误形状,修复为 KB→MB 换算;教训(对 Electron API 字段写契约前先实测真实返回)记入 platform-services.md。真机:运行中 86 MB 与 Get-Process 86.3MB 交叉核对一致,停止后显示 —;49/49 测试、ui tsc 干净、smoke 5/5。P0/P1/P2 全部收官,剩横切小项与 P3 按需。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d7909d2` | feat(host): per-app memory observation in management detail (P2.5, closes P2) |
+
+### Status
+
+[OK] **Completed**
