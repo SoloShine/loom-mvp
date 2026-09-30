@@ -114,6 +114,7 @@ export const mockSettings: HostSettings = {
   logRetentionDays: 14,
   maxLogBytesPerApp: 1048576,
   recycle: { enabled: false, defaultMinutes: 30, exemptAppIds: ["lianliankan"], notify: false },
+  restoreSession: false,
 };
 
 // Launcher 面板演示数据:覆盖收藏 / 近期使用 / 多命令 / 无命令 / 无 lastUsedAt。

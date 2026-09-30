@@ -166,6 +166,31 @@ test('state winBounds round-trips via setWinBounds and survives a fresh process'
   } finally { fs.rmSync(data, { recursive: true, force: true }); }
 });
 
+test('settings restoreSession: legacy file migrates to false, patch validates boolean and round-trips', () => {
+  const { spawnSync } = require('node:child_process');
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-restore-'));
+  const output = path.join(dir, 'state.cjs');
+  esbuild.buildSync({ entryPoints: [path.join(__dirname, '..', 'host/src/main/state.ts')], outfile: output, bundle: true, platform: 'node', format: 'cjs', external: ['electron'] });
+  const run = script => spawnSync(process.execPath, ['-e', `const s=require(${JSON.stringify(output)}); ${script}`], { env: { ...process.env, MINI_DATA_DIR: data }, encoding: 'utf8' });
+  try {
+    // 旧版本 host-state.json 缺 restoreSession → normalize 补 false,不判损坏、不旁路
+    fs.writeFileSync(path.join(data, 'host-state.json'), JSON.stringify({
+      schemaVersion: 1,
+      settings: { launcherHotkey: 'Ctrl+Shift+M', logRetentionDays: 14, maxLogBytesPerApp: 10485760, recycle: { enabled: false, defaultMinutes: 0, exemptAppIds: [], notify: false } },
+      apps: { sample: { enabled: true, favorite: false, addedAt: '2026-01-01T00:00:00.000Z', useCount: 0 } },
+    }));
+    assert.equal(run('s.initState(); if (s.settings().restoreSession !== false) process.exit(2); if (!s.meta("sample")) process.exit(3);').status, 0, 'legacy migration');
+    // patchSettings 接受 boolean 并落盘
+    assert.equal(run('s.initState(); s.patchSettings({ restoreSession: true }); if (s.settings().restoreSession !== true) process.exit(4);').status, 0, 'patch boolean');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(data, 'host-state.json'), 'utf8')).settings.restoreSession, true);
+    // 新进程读回(true round-trip)
+    assert.equal(run('s.initState(); if (s.settings().restoreSession !== true) process.exit(5);').status, 0, 'fresh-process read-back');
+    // 非 boolean 拒绝(validSettings 失败 → 设置值超出允许范围)
+    const bad = run('s.initState(); try { s.patchSettings({ restoreSession: "yes" }); } catch (e) { if (/设置值超出允许范围/.test(String(e.message))) process.exit(5); process.exit(6); } process.exit(7);');
+    assert.equal(bad.status, 5, `non-boolean restoreSession must be rejected: ${bad.stderr || bad.stdout}`);
+  } finally { fs.rmSync(data, { recursive: true, force: true }); }
+});
+
 test('invalid winBounds trips the corrupt bypass and leaves state readonly', () => {
   const { spawnSync } = require('node:child_process');
   const output = path.join(dir, 'state.cjs');

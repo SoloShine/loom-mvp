@@ -284,3 +284,60 @@ test('initRuns recovery: buried terminal suppresses interrupted; missing termina
     assert.equal(ghostAgain.length, 1, '二次启动不得重复 interrupted');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('initRuns returns only appIds marked interrupted this boot, in order and deduped; second call returns []', () => {
+  const dir = tmpdir('histreturn');
+  try {
+    const lines = [
+      // run-b 有埋藏终态(不进恢复名单);run-a 与 run-c 无终态 → 补 interrupted
+      JSON.stringify({ eventId: 't', appId: 'app-b', runId: 'run-b', kind: 'stop', outcome: 'success', at: '2026-01-01T00:00:00Z' }),
+      JSON.stringify({ eventId: 'i1', appId: 'app-a', kind: 'invoke', outcome: 'success', at: '2026-01-01T00:00:01Z' }),
+    ];
+    seedHistory(dir, lines);
+    fs.writeFileSync(path.join(dir, 'active-runs.json'), JSON.stringify({
+      schemaVersion: 1, epoch: 'ep1',
+      runs: [
+        { appId: 'app-a', pid: 1, runId: 'run-a', startedAt: '2026-01-01T00:00:00Z' },
+        { appId: 'app-b', pid: 2, runId: 'run-b', startedAt: '2026-01-01T00:00:00Z' },
+        { appId: 'app-a', pid: 3, runId: 'run-c', startedAt: '2026-01-01T00:00:00Z' }, // 同 appId 第二个 run → 去重
+        { appId: 'app-c', pid: 4, runId: 'run-d', startedAt: '2026-01-01T00:00:00Z' },
+      ],
+    }));
+    const out = run(historyBundle, dir, `
+      const first = c.initRuns();
+      if (JSON.stringify(first) !== JSON.stringify(["app-a","app-c"])) process.exit(2);
+      const second = c.initRuns();
+      if (JSON.stringify(second) !== JSON.stringify([])) process.exit(3);
+      console.log("ok");
+    `);
+    assert.match(out.stdout, /ok/, out.stderr);
+    // interrupted 照常只落在无终态的 run 上(run-b 已有终态不补)
+    const text = fs.readFileSync(path.join(dir, 'history.jsonl'), 'utf8');
+    const interrupted = text.split('\n').filter((l) => l.includes('"interrupted"')).map((l) => JSON.parse(l).runId);
+    assert.deepEqual(interrupted.sort(), ['run-a', 'run-c', 'run-d']);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('restored events are accepted and queryable, and do not suppress later terminal judgment', () => {
+  const dir = tmpdir('histrestored');
+  try {
+    seedHistory(dir, [
+      JSON.stringify({ eventId: 'e0', appId: 'app-a', kind: 'invoke', outcome: 'success', at: '2026-01-01T00:00:00Z' }),
+    ]);
+    ok(run(historyBundle, dir, `
+      // restored 是伴随事件:不带 runId 也必须能写、能 query 回来
+      if (!c.event({ appId: "app-a", kind: "restored", outcome: "success" })) process.exit(2);
+      if (!c.event({ appId: "app-b", kind: "restored", outcome: "failure", message: "APP_DISABLED: App app-b 已禁用" })) process.exit(3);
+      const restoredA = c.query("app-a", 0, 10).events.filter((e) => e.kind === "restored");
+      if (restoredA.length !== 1 || restoredA[0].outcome !== "success") process.exit(4);
+      const restoredB = c.query("app-b", 0, 10).events.filter((e) => e.kind === "restored");
+      if (restoredB.length !== 1 || restoredB[0].message !== "APP_DISABLED: App app-b 已禁用") process.exit(5);
+      // restored 不进 TERMINAL_KINDS:同 runId 先写 restored,首次 stop 仍落为终态且只落一条
+      if (!c.event({ appId: "app-a", runId: "run-x", kind: "restored", outcome: "success" })) process.exit(6);
+      if (!c.event({ appId: "app-a", runId: "run-x", kind: "stop", outcome: "success" })) process.exit(7);
+      const stops = c.query("app-a", 0, 20).events.filter((e) => e.kind === "stop" && e.runId === "run-x");
+      if (stops.length !== 1 || stops[0].eventId !== "run-x:terminal") process.exit(8);
+      console.log("ok");
+    `), 'restored event');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

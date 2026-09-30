@@ -34,6 +34,8 @@ export interface Settings {
   logRetentionDays: number;
   maxLogBytesPerApp: number;
   recycle: RecycleSettings;
+  /** P2.3 会话恢复:Host 启动完成后自动重新 start 本次 boot 被标 interrupted 的 App。默认关。 */
+  restoreSession: boolean;
 }
 interface State {
   schemaVersion: 1;
@@ -46,6 +48,7 @@ export const defaults: Settings = {
   logRetentionDays: 14,
   maxLogBytesPerApp: 10 * 1024 * 1024,
   recycle: { enabled: false, defaultMinutes: 0, exemptAppIds: [], notify: false },
+  restoreSession: false,
 };
 const stateFile = () => path.join(paths.data, "host-state.json");
 let state: State | undefined;
@@ -82,11 +85,13 @@ function validSettings(s: unknown): s is Settings {
     object(r) && typeof r.enabled === "boolean" &&
     Number.isInteger(r.defaultMinutes) && (r.defaultMinutes as number) >= 0 && (r.defaultMinutes as number) <= 7 * 24 * 60 &&
     typeof r.notify === "boolean" &&
-    Array.isArray(r.exemptAppIds) && r.exemptAppIds.length <= 500 && r.exemptAppIds.every((id) => typeof id === "string" && validId(id));
+    Array.isArray(r.exemptAppIds) && r.exemptAppIds.length <= 500 && r.exemptAppIds.every((id) => typeof id === "string" && validId(id)) &&
+    typeof s.restoreSession === "boolean";
 }
 /** 旧版本 host-state.json 缺少 recycle 段或段内新字段时逐项补默认值,避免整份文件被误判损坏。 */
 function normalizeSettings(s: unknown): void {
   if (!object(s)) return;
+  if (s.restoreSession === undefined) s.restoreSession = false;
   if (object(s.recycle)) {
     const r = s.recycle as Record<string, unknown>;
     if (r.enabled === undefined) r.enabled = false;

@@ -67,6 +67,8 @@ MVP 已判卷(2026-09-28,9/10 §21 指标达标,见 `docs/acceptance-record.md`)
 
 ## P2:平台能力第二层
 
+**P2.3 会话恢复 实施记录(2026-09-30 完成,Trellis 任务 09-29-session-restore)**:设置新增顶层 `restoreSession`(默认关,旧 host-state.json 缺字段自动补默认不判损坏);`history.initRuns()` 返回本次补 interrupted 的 appId(保序去重)——恢复依据只认本次调用返回值,不翻 history 旧账(上次 boot 的 interrupted 无法与本次区分);manager 新导出 `restoreInterrupted`:开关门 → 串行 start 逐项 try/catch,success/failure 各写 `restored` 伴随事件(**不进 TERMINAL_KINDS**,防恢复中的 run 被误判已终结),缺失/禁用/损坏不做预检,由 requireApp 判定、原因原样进事件与日志;boot 在 startControlChannel 就绪后 fire-and-forget,循环内查 draining。闸门:npm test 48/48(+3)、ui tsc 干净、smoke 5/5(smoke 前必须先 npm run build,脚本头部声明);真机三场景全过——开开关 taskkill 强杀重启两 App 自动回来(restored success ×2,窗口截图)、单项失败(APP_DISABLED)写 restored failure 不阻塞其余、关开关行为不变(仅 interrupted);恢复出的 run 正常 stop 落终态。验收操作坑:改 host-state.json 必须趁 Host 未起(P2.1 已知);Host 重启后旧端口/令牌失效,重读 runtime.json。
+
 **P2.2 通知交互化 实施记录(2026-09-29 完成,Trellis 任务 09-29-notification-click)**:`host.notification.show` 增加可选 `clickCommand`(必须为清单声明命令,show 时即校验);点击按 invoke 全语义分发(自动启动/活跃/history)+ focusApp 唤起面板;回调经 manager 注入(破 manager↔core 环,setWindowActivityHook 同款);未声明维持纯展示。验收载体用户定调用 file-organizer(确定性流程,storage 预置 lastDir),不用连连看(环境随机);真机人肉点击双侧通过(File Organizer 点击→面板弹出+invoke show 入 history;clipboard-tool 无点击行为)。经验:专注模式抑制横幅(高度 0),toast 物理点击无法自动化,需人肉。
 
 **P2.1 窗口几何持久化 实施记录(2026-09-29 完成,Trellis 任务 09-29-win-bounds-persist)**:`AppMeta.winBounds`(DIP,moved/resized+500ms 防抖保存,最大化/最小化不写);恢复经纯函数 `services/winBounds.ts` 可见性校验(零相交回退默认+日志,部分越界钳回工作区);仅 manifest 窗口持久化,SDK 动态窗口路径不变。验收期修两真问题:controlChannel create→run 竞态(重扫自愈)、Electron 跨 scale 一次性 setBounds 尺寸缩放怪癖(拆移动+定尺寸)。44/44 测试、smoke 5/5、真机同屏/跨屏/过期坐标/最小化全过。

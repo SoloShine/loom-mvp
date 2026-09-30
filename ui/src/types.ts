@@ -39,6 +39,8 @@ export interface HostSettings {
   logRetentionDays: number;
   maxLogBytesPerApp: number;
   recycle: RecycleSettings;
+  /** Host 启动完成后自动恢复上次被标 interrupted 的 App;默认关。 */
+  restoreSession: boolean;
 }
 
 export interface HistoryEvent {

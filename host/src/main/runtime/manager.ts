@@ -286,6 +286,27 @@ export async function stopAll(): Promise<void> {
   }
 }
 
+// —— 会话恢复(P2.3,设置 restoreSession 默认关)——————————————————————
+// boot 在 startControlChannel 就绪后 fire-and-forget 调用,ids 来自 history.initRuns()
+// 本次补 interrupted 的 appId。开关关闭或名单为空直接返回;串行 await start 避免
+// 并发 fork 抖动;恢复项不预检(缺失/禁用/清单损坏一律交给 start 抛错,requireApp
+// 自带判定与自愈),单项失败写 restored failure 不阻塞其余;循环内查 draining,
+// Host 正在退出即放弃剩余项。绝不向调用方抛错(fire-and-forget 调用方无 catch)。
+export async function restoreInterrupted(ids: string[]): Promise<void> {
+  if (!ids.length || !state.settings().restoreSession) return;
+  for (const id of ids) {
+    if (draining) break;
+    try {
+      await start(id);
+      history.event({ appId: id, kind: "restored", outcome: "success" });
+      logHost("info", `会话恢复: app ${id} 已重新启动`);
+    } catch (e: any) {
+      history.event({ appId: id, kind: "restored", outcome: "failure", message: String(e?.message ?? e) });
+      logHost("warn", `会话恢复: app ${id} 启动失败: ${String(e?.message ?? e)}`);
+    }
+  }
+}
+
 // —— 闲置自动回收(设置页「闲置回收」+ 清单 lifecycle.idleStopMinutes)——————
 // 生效规则见 idleStop.ts:总开关、例外名单、清单声明优先/全局默认兜底。
 // 活跃 = invoke、启动成功、窗口 show/focus;超时走正常 stop(可被重新启动)。

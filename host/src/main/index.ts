@@ -34,7 +34,9 @@ function boot(): Promise<void> {
 
   state.initState();
   configureLogging(state.settings());
-  history.initRuns();
+  // 恢复依据必须在此处拿走:initRuns 会补 interrupted 并清空 active-runs,
+  // 事后翻 history 无法区分「本次 boot 的 interrupted」与上次遗留
+  const interruptedApps = history.initRuns();
   registry.initRegistry();
   registry.onRegistryChange(() => {
     logHost("info", "registry changed");
@@ -86,7 +88,9 @@ function boot(): Promise<void> {
   process.on("unhandledRejection", (e) => {
     logHost("error", `unhandledRejection: ${String(e)}`);
   });
-  return startControlChannel();
+  // 会话恢复放在控制通道就绪之后(恢复期 CLI 可观测);fire-and-forget,restoreInterrupted
+  // 内部吞错,不改变 boot 返回 Promise<void> 的语义
+  return startControlChannel().then(() => { void manager.restoreInterrupted(interruptedApps); });
 }
 
 app.on("window-all-closed", () => {

@@ -40,6 +40,7 @@ export function SettingsPage() {
   const [recycleMinutes, setRecycleMinutes] = useState("");
   const [exempt, setExempt] = useState<string[]>([]);
   const [notify, setNotify] = useState(false);
+  const [restoreSession, setRestoreSession] = useState(false);
   const [appOptions, setAppOptions] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -55,6 +56,7 @@ export function SettingsPage() {
         setRecycleMinutes(String(s.recycle.defaultMinutes));
         setExempt(s.recycle.exemptAppIds);
         setNotify(s.recycle.notify);
+        setRestoreSession(s.restoreSession);
       })
       .catch((e) => toast(errorMessage(e), true));
     bridge.getApps()
@@ -76,6 +78,7 @@ export function SettingsPage() {
           exemptAppIds: exempt,
           notify,
         },
+        restoreSession,
       });
       setSettings(fresh);
       setHotkey(fresh.launcherHotkey);
@@ -85,6 +88,7 @@ export function SettingsPage() {
       setRecycleMinutes(String(fresh.recycle.defaultMinutes));
       setExempt(fresh.recycle.exemptAppIds);
       setNotify(fresh.recycle.notify);
+      setRestoreSession(fresh.restoreSession);
       toast("设置已保存,热键与闲置回收即时生效");
     } catch (e) {
       toast(errorMessage(e), true);
@@ -121,7 +125,7 @@ export function SettingsPage() {
                   <span className="text-muted-foreground">天</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-6 py-3 last:pb-0">
+              <div className="flex items-center justify-between gap-6 py-3">
                 <div>
                   <div className="text-[13px] font-medium">每个 App 最大日志容量</div>
                   <div className="mt-0.5 text-xs text-muted-foreground">单 App 日志超过该值触发轮转,单位:字节({Math.round(Number(bytes || 0) / 1024 / 1024 * 10) / 10} MB)</div>
@@ -130,6 +134,13 @@ export function SettingsPage() {
                   <Input type="number" min={1024} value={bytes} onChange={(e) => setBytes(e.target.value)} className="w-28 text-right font-mono" />
                   <span className="text-muted-foreground">字节</span>
                 </div>
+              </div>
+              <div className="flex items-center justify-between gap-6 py-3 last:pb-0">
+                <div>
+                  <div className="text-[13px] font-medium">启动时恢复上次运行的 App</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">Host 意外退出后,下次启动自动拉起当时运行中的 App;正常关闭不恢复</div>
+                </div>
+                <Switch checked={restoreSession} onCheckedChange={setRestoreSession} aria-label="启动时恢复上次运行的 App" />
               </div>
             </div>
           ) : (

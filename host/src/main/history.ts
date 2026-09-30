@@ -9,7 +9,7 @@ export interface HistoryEvent {
   eventId: string;
   appId: string;
   runId?: string;
-  kind: "start" | "stop" | "crash" | "interrupted" | "invoke";
+  kind: "start" | "stop" | "crash" | "interrupted" | "invoke" | "restored";
   at: string;
   outcome: "success" | "failure";
   command?: string;
@@ -36,8 +36,12 @@ export function event(event: Omit<HistoryEvent, "eventId" | "at">): boolean {
     return true;
   } catch (e) { logHost("warn", `history 写入失败: ${String(e)}`); return false; }
 }
-export function initRuns(): void {
-  if (active) return;
+/** 启动恢复:把上次活跃且无终态的 run 逐个补 `interrupted` 终态事件并清空 active-runs。
+ *  返回本次实际补了 interrupted 的 appId(保序去重,近似崩溃前启动顺序),供 boot 交给
+ *  manager.restoreInterrupted 做会话恢复;无待恢复项或二次调用返回 []。
+ *  惰性调用点(begin/finish/commit)忽略返回值,行为不变。 */
+export function initRuns(): string[] {
+  if (active) return [];
   let previous: ActiveFile | undefined;
   if (fs.existsSync(activePath())) {
     const raw: unknown = JSON.parse(fs.readFileSync(activePath(), "utf8"));
@@ -62,10 +66,17 @@ export function initRuns(): void {
       return need.size === 0;
     });
   }
+  const interruptedApps: string[] = [];
+  const seenApps = new Set<string>();
   for (const r of [...next.runs]) {
-    if (!terminal.has(r.runId) && !event({ appId: r.appId, runId: r.runId, kind: "interrupted", outcome: "failure", message: "host-exit" })) continue;
+    const markedNow = !terminal.has(r.runId) &&
+      event({ appId: r.appId, runId: r.runId, kind: "interrupted", outcome: "failure", message: "host-exit" });
+    // 已有终态(只清 active)或补 interrupted 失败(留给下次启动重试)都不进恢复名单
+    if (!markedNow) { if (terminal.has(r.runId)) finish(r.runId); continue; }
     finish(r.runId);
+    if (!seenApps.has(r.appId)) { seenApps.add(r.appId); interruptedApps.push(r.appId); }
   }
+  return interruptedApps;
 }
 function commit(runs: ActiveRun[]): void {
   if (!active) initRuns();
