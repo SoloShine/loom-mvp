@@ -1,0 +1,35 @@
+id: recipe-runner
+name: 配方执行器
+version: 0.1.0
+
+entry: src/main.ts
+
+# 常驻形态：不声明 lifecycle（缺省 = 不闲置回收），热键注册后一直在。
+# 窗口只由用户显式动作关闭（阶段 3 取舍）：启动即展示主界面（配方列表 ×
+# 轨迹叠加），表单结束不程序化收窗；ui.* 步骤执行时隐藏则唤起、销毁则重建。
+ui:
+  type: window
+  width: 960
+  height: 680
+  # dev server 起来后重开窗口自动切热更,停掉自动回退产物（react 模板管线；
+  # 端口 5176：避开模板缺省 5174，可与其它 react App 的 dev server 并存）
+  devUrl: http://localhost:5176
+
+commands:
+  - id: run
+    title: "运行配方（args: recipe, params?, preset?, fromStep?, dryRun?）"
+  - id: stop
+    title: 停止当前运行
+  - id: check
+    title: 校验配方
+
+permissions:
+  - clipboard
+  - files
+  - screen
+  - mouse
+  - keyboard
+  - hotkey
+  - notification
+  - process
+  - storage

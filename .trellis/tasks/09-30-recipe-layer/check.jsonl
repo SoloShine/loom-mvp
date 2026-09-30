@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "检查测试覆盖与验收证据是否按纪律落实"}
+{"file": ".trellis/spec/sdk/backend/quality-guidelines.md", "reason": "SDK 调用侧质量红线（错误处理、promise 语义）"}
+{"file": ".trellis/spec/mini-host/frontend/quality-guidelines.md", "reason": "runner UI 质量检查口径"}
+{"file": ".trellis/spec/guides/windows-pitfalls.md", "reason": "Windows 坑复查：fs.watch 防抖、helper 进程清理"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层一致性：schema.json ↔ parse ↔ interp ↔ UI 表单四方对齐"}

@@ -12,3 +12,4 @@ apps/*/debug/
 __pycache__/
 .zcode/
 *.log
+.tmp/

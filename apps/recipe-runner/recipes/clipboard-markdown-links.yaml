@@ -1,0 +1,43 @@
+# 验收场景 2：剪贴板格式转换（零交互纯管道，纯热键即走）。
+# 需求：常把「标题 + 空白 + URL」格式的行复制进剪贴板（聊天/笔记里拷的），
+# 想一键整批转成 Markdown 链接 [标题](URL) 写回剪贴板，并通知转换行数。
+#
+# clipboard.readText → text.match 计数 → text.replace 转换（$1/$2 反向引用）
+# → clipboard.writeText → notification。无参数无交互：onRun 缺省 silent，
+# 热键 / launcher 触发即静默执行（快路径）。
+id: clipboard-markdown-links
+name: 剪贴板转 Markdown 链接
+hotkey: Ctrl+Alt+L
+
+steps:
+  - id: read
+    action: clipboard.readText
+    out: text
+
+  - id: count
+    action: text.match
+    args:
+      text: "{{steps.read.text}}"
+      pattern: '^\S[^\n]*?\s+https?://\S+$'
+      flags: "gm"
+      all: true
+    out: hits
+
+  - id: convert
+    action: text.replace
+    args:
+      text: "{{steps.read.text}}"
+      pattern: '^(.+?)[ \t]+(https?://\S+)[ \t]*$'
+      flags: "gm"
+      replacement: '[$1]($2)'
+    out: md
+
+  - id: write
+    action: clipboard.writeText
+    args: { text: "{{steps.convert.md}}" }
+
+  - id: notify
+    action: notification.show
+    args:
+      title: 剪贴板已转 Markdown
+      body: '已把 {{steps.count.hits.length}} 行转成 Markdown 链接'

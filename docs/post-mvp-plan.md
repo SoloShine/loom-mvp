@@ -105,7 +105,7 @@ MVP 已判卷(2026-09-28,9/10 §21 指标达标,见 `docs/acceptance-record.md`)
 ## P3:生态雏形(按需)
 
 1. **`mini install <目录>`**:拷贝目录进 apps/ → validate → enable。只是省去手工拷贝,不是商店(PRD §18 边界内):无 registry、无版本管理、无远端。
-2. **两个实用化示例 App**:`clipboard-snippets`(回应"clipboard-tool 看不懂有什么用"——片段保存/检索/模板粘贴,manifest hotkey 唤起,日志不记正文)+ `screenshot-notes`(截图备注导出,兼作 2.4 的 helper 模式实证)。
+2. **实用化示例 App**:`clipboard-snippets`(回应"clipboard-tool 看不懂有什么用"——片段保存/检索/模板粘贴,manifest hotkey 唤起,日志不记正文)+ `screenshot-notes`(截图备注导出,兼作 2.4 的 helper 模式实证)+ `key-click-mapper`(按键→坐标点击实时映射;2026-09-30 recipe 层任务 09-30-recipe-layer 的 R6 分界判例:事件驱动、常驻监听属 app 形态。`mouse.waitClick` 取坐标、动态热键开关、自有 helper 实现全局按键监听;亦是「常驻事件层」未来 host 化的第一个采样点)。
 3. **App 分享约定**(可选):App 目录 README 的自描述格式(依赖、权限、helper 需求、已知限制),让"把 App 目录发给另一台机器装上"有章可循。
 4. **file-organizer 专项重设计**(用户点名,2026-09-28 P0 验收反馈):「说是归档,但没说如何归档、精细化配置等」。专项内容:明确归档语义(移动/复制/归档目录结构的定义与取舍)、精细化规则配置(自定义分类与目标、按文件名/大小/时间多条件、例外清单)、去向可解释性。重设计不回退既有安全边界(不覆盖、拒跨卷、只动顶层普通文件)。
 

@@ -1,0 +1,77 @@
+# 验收场景 1：下载目录批量重命名
+# fs.list → 规范化变换（js.eval）→ ui.confirm 清单确认 → for each 循环
+# files.move → notification 汇报。
+#
+# 沙箱路径说明：params.dir 缺省指向仓库内沙箱
+#   D:/Project/loom-mvp/.tmp/recipe-acceptance/downloads
+# （验收专用假 pdf；沙箱目录不能删，删了本配方就跑不了）。
+# 真实使用：运行时在参数表单把 dir 改成你的下载目录（如 D:/Downloads），
+# 取值链会记忆上次用的目录（last-used），或另存为 preset。
+#
+# 规范化规则：全小写；空格/下划线串折成单个「-」；剥掉括号类副本标记
+# （(2)、（副本 1））与感叹号；扩展名统一小写；已是规范名的文件不动
+# （幂等——重复执行第二次时清单为空，不会报「目标已存在」）。
+id: rename-downloads
+name: 下载目录批量重命名
+hotkey: Ctrl+Alt+R
+onRun: silent
+params:
+  dir:
+    label: 目标目录
+    type: string
+    default: "D:/Project/loom-mvp/.tmp/recipe-acceptance/downloads"
+    required: true
+  filter:
+    label: 文件过滤（glob，* 与 ?）
+    type: string
+    default: "*.pdf"
+  skipConfirm:
+    label: 跳过确认（自动化 / 已核对过清单）
+    type: boolean
+    default: false
+
+steps:
+  - id: list
+    action: fs.list
+    args: { dir: "{{params.dir}}", filter: "{{params.filter}}" }
+    out: files
+
+  - id: plan
+    action: js.eval
+    args:
+      code: |
+        steps.list.files.map(f => {
+          const norm = (f.stem
+            .replace(/[_\s]+/g, "-")
+            .replace(/[()（）]+/g, "")
+            .replace(/!+/g, "")
+            .replace(/-+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .toLowerCase()) || "untitled";
+          return {
+            from: f.path,
+            name: f.name,
+            to: params.dir + "/" + norm + f.ext.toLowerCase(),
+          };
+        }).filter(r => r.from !== r.to)
+    out: renames
+
+  - id: confirm
+    action: ui.confirm
+    when: "{{params.skipConfirm !== true}}"
+    args:
+      title: '将重命名 {{steps.plan.renames.length}} 个文件'
+      body: '{{steps.plan.renames.map(r => r.name + "  ->  " + r.to.split("/").pop()).join("\n")}}'
+
+  - id: ren
+    for: { each: r, in: "{{steps.plan.renames}}" }
+    steps:
+      - id: one
+        action: files.move
+        args: { from: "{{r.from}}", to: "{{r.to}}" }
+
+  - id: done
+    action: notification.show
+    args:
+      title: 批量重命名完成
+      body: '重命名完成：本次实际处理 {{steps.plan.renames.length}} 个文件'

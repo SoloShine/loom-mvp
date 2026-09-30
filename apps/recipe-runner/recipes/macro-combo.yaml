@@ -1,0 +1,56 @@
+# 验收场景 4（A 版，一次性宏）：键鼠固定节拍连招。
+# 需求：游戏开场固定操作——按 K 次技能键，每次间隔固定毫秒，并在固定
+# 坐标点一下左键（如「开场按 3 次技能 1 + 每次点一下战旗位置」）。
+#
+# 安全设计：clickX / clickY 必填且不给默认值——不预设任何屏幕坐标，
+# 缺值时热键/launcher 触发会先弹参数表单（取值链会记忆上次坐标，
+# 反复用同一套坐标第二次起静默直跑）。
+# 真跑前务必先 dry-run 核对将执行的按键与坐标；验收时坐标指向沙箱
+# 记事本窗口（.tmp/recipe-acceptance/macro-pad.txt），不要对桌面盲点。
+id: macro-combo
+name: 键鼠一次性宏（连招节拍）
+hotkey: Ctrl+Alt+K
+params:
+  key:
+    label: 技能键（单键名）
+    type: string
+    default: "1"
+  times:
+    label: 按键次数
+    type: number
+    default: 3
+  intervalMs:
+    label: 节拍间隔（毫秒）
+    type: number
+    default: 500
+  clickX:
+    label: 点击 X（物理像素）
+    type: number
+    required: true
+  clickY:
+    label: 点击 Y（物理像素）
+    type: number
+    required: true
+
+steps:
+  - id: combo
+    for: { times: "{{params.times}}" }
+    steps:
+      - id: press
+        action: keyboard.press
+        args: { key: "{{params.key}}" }
+      - id: beat
+        action: delay
+        args: { ms: "{{params.intervalMs}}" }
+      - id: aim
+        action: mouse.move
+        args: { x: "{{params.clickX}}", y: "{{params.clickY}}" }
+      - id: hit
+        action: mouse.click
+        args: { x: "{{params.clickX}}", y: "{{params.clickY}}" }
+
+  - id: done
+    action: notification.show
+    args:
+      title: 连招完成
+      body: '宏执行完毕：{{params.times}} 轮「{{params.key}} + 点击 ({{params.clickX}},{{params.clickY}})」'

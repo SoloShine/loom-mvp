@@ -1,0 +1,15 @@
+# 最小冒烟配方（阶段 2 门 2 验证载体）：零参数、零交互纯管道。
+id: clipboard-notify
+name: 剪贴板冒烟
+steps:
+  - id: read
+    action: clipboard.readText
+    out: text
+  - id: wait
+    action: delay
+    args: { ms: 100 }
+  - id: notify
+    action: notification.show
+    args:
+      title: 剪贴板内容
+      body: "{{steps.read.text.slice(0, 120)}}"

@@ -1,0 +1,78 @@
+# 验收场景 3（加时赛）：固定区域截图存档。
+# 需求：把屏幕上一块固定区域（如看板/监控角）截下来存进档案目录，弹通知
+# 告知落盘路径。全自动用固定 rect；交互式框选（screen.selectRegion 等
+# 用户框一块）留人工清单——v0 验收不做人肉交互。
+#
+# 落盘链路：screen.captureRegion（dataURL）→ js.eval 剥 base64 并生成
+# 路径 → files.write 写 .b64 文本 → process.run certutil -decode 还原
+# .png → files.remove 清理中间文件。files.write 只写 utf8 文本，二进制
+# 落盘须经本地解码器（PRD §2.4「截图经 helper/外部工具落盘」的 recipe 化）。
+#
+# 引用规范示例：输出一律 steps.<步骤id>.<out名>（bundle 步骤用缺省 out，
+# 故引用 steps.bundle.out.*）。
+id: screen-archive
+name: 固定区域截图存档
+params:
+  x: { label: 区域 X, type: number, default: 200 }
+  y: { label: 区域 Y, type: number, default: 200 }
+  width: { label: 宽, type: number, default: 320 }
+  height: { label: 高, type: number, default: 240 }
+  outDir:
+    label: 存档目录
+    type: string
+    default: "D:/Project/loom-mvp/.tmp/recipe-acceptance/screenshots"
+    required: true
+
+steps:
+  - id: shot
+    action: screen.captureRegion
+    args:
+      rect:
+        x: "{{params.x}}"
+        y: "{{params.y}}"
+        width: "{{params.width}}"
+        height: "{{params.height}}"
+    out: image
+
+  - id: bundle
+    action: js.eval
+    args:
+      code: |
+        ({
+          b64: steps.shot.image.dataUrl.slice(steps.shot.image.dataUrl.indexOf(",") + 1),
+          b64Path: params.outDir + "/region-" + env.now + ".b64",
+          pngPath: params.outDir + "/region-" + env.now + ".png",
+        })
+
+  - id: tmp
+    action: files.write
+    args:
+      path: "{{steps.bundle.out.b64Path}}"
+      data: "{{steps.bundle.out.b64}}"
+
+  - id: decode
+    action: process.run
+    args:
+      command: certutil.exe
+      args: ["-decode", "{{steps.bundle.out.b64Path}}", "{{steps.bundle.out.pngPath}}"]
+
+  - id: assert
+    action: js.eval
+    args:
+      code: |
+        (function () {
+          if (!steps.decode) return "(dry-run) 未解码";
+          if (steps.decode.out.exitCode !== 0) throw new Error("certutil 解码失败: " + steps.decode.out.stderr);
+          return steps.bundle.out.pngPath;
+        })()
+    out: pngPath
+
+  - id: cleanup
+    action: files.remove
+    args: { path: "{{steps.bundle.out.b64Path}}" }
+
+  - id: done
+    action: notification.show
+    args:
+      title: 区域截图已存档
+      body: "{{steps.assert.pngPath}}（{{steps.shot.image.width}}x{{steps.shot.image.height}}）"

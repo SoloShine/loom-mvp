@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/sdk/backend/api-surface.md", "reason": "runner 动作直通层逐方法映射 host.*，签名与语义以此为准"}
+{"file": ".trellis/spec/mini-host/backend/manifest-and-lifecycle.md", "reason": "app.yaml 结构与 onStart/invoke/常驻语义（runner 热键常驻的前提）"}
+{"file": ".trellis/spec/mini-host/backend/platform-services.md", "reason": "dispatcher 各服务行为细节：process/hotkey/ui 消息、Electron API 实测教训"}
+{"file": ".trellis/spec/mini-host/backend/directory-structure.md", "reason": "apps 布局与构建管线约定（react 模板产物路径）"}
+{"file": ".trellis/spec/guides/windows-pitfalls.md", "reason": "Windows 专项坑：fs.watch、input-helper、进程退出等本任务都会触碰"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "测试组织与验收纪律（engine TDD 阶段即适用）"}
+{"file": ".trellis/spec/mini-host/frontend/component-guidelines.md", "reason": "runner UI（React 单向投影 + schema→form）沿用管理中心组件规范"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用判定：react 模板管线、表单渲染器、trace 结构勿重复造"}
