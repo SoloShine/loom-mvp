@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/mini-host/backend/platform-services.md", "reason": "校验 services 模式合规与 spec 条目同步"}
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "校验错误处理与脏输入健壮性"}
+{"file": ".trellis/spec/mini-host/frontend/state-management.md", "reason": "校验轮询 effect 不破坏 sub/busy 状态"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "校验测试覆盖与闸门"}

@@ -18,6 +18,8 @@ export interface AppInfo {
   favorite?: boolean;
   error?: string;
   pid?: number;
+  /** 运行中 App 的 utilityProcess 当前内存(working set,MB 四舍五入);非运行态/未知为 undefined。 */
+  memoryMB?: number;
   lastUsedAt?: string;
   useCount?: number;
   manifestIssues?: string[];

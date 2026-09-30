@@ -49,6 +49,21 @@ export function AppsPage({ query }: { query: string }) {
     return () => { alive = false; };
   }, [selectedId, toast]);
 
+  // 内存观测轮询:运行中详情每 5s 轻刷新一次。只更新 detail,
+  // 绝不动 sub/busy;换选中、变非 running、busy 中、卸载即停,晚到响应按 alive 丢弃。
+  useEffect(() => {
+    const id = detail?.id;
+    const status = detail?.status;
+    if (!id || status !== "running" || busy) return;
+    let alive = true;
+    const timer = setInterval(() => {
+      bridge.getApp(id)
+        .then((app) => { if (alive) setDetail(app); })
+        .catch(() => { /* 单次取数失败不打扰用户,下轮轮询自愈 */ });
+    }, 5_000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [detail?.id, detail?.status, busy]);
+
   const visible = useMemo(() => {
     const list = apps ?? [];
     const q = query.trim().toLowerCase();
@@ -185,6 +200,11 @@ export function AppsPage({ query }: { query: string }) {
               </Row>
               <Row label="UI 类型"><Badge variant="secondary">{detail.uiType ?? "none"}</Badge></Row>
               {detail.pid && <Row label="进程 PID"><span className="font-mono text-xs">{detail.pid}</span></Row>}
+              <Row label="内存">
+                {detail.status === "running" && typeof detail.memoryMB === "number"
+                  ? `${detail.memoryMB} MB`
+                  : <span className="text-muted-foreground">—</span>}
+              </Row>
               {detail.idleStop && (
                 <Row label="闲置回收">
                   {detail.idleStop.effective ? (

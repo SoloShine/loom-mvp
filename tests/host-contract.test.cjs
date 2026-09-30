@@ -138,6 +138,35 @@ test('sanitizeRestoredBounds keeps visible bounds, clamps partial ones, rejects 
   );
 });
 
+test('memoryForPid matches by pid, converts KB working set (Electron 44 real shape), skips dirty entries without throwing', () => {
+  const { memoryForPid } = load('services/appMetrics.ts');
+  const metrics = [
+    // Electron 44 实测形状:ProcessMetric.memory.workingSetSize 单位 KB(91892 KB ≈ 89.7 MB)
+    { type: 'Utility', pid: 37256, serviceName: 'node.mojom.NodeService', memory: { workingSetSize: 91892, peakWorkingSetSize: 91892, privateBytes: 21572 } },
+    { pid: '300', memory: { workingSetSize: 999 } }, // pid 非数值(字符串)→ 不对号
+    { type: 'utility', pid: 200 }, // 缺 memory → 跳过
+    { type: 'utility', pid: 400, memory: { workingSetSize: '87' } }, // 非数值 → 跳过
+    { type: 'utility', pid: 500, memory: { workingSetMB: 41.4 } }, // 旧文档形状 workingSetMB,兼容
+    { type: 'gpu', pid: 900, memory: { workingSetSize: 5000 } }, // Electron 其它进程,不会被误对号
+  ];
+  // 命中 + KB→MB 换算:91892/1024 = 89.74 → 90
+  assert.equal(memoryForPid(37256, metrics), 90);
+  // MB 形状兼容:41.4 → 41
+  assert.equal(memoryForPid(500, metrics), 41);
+  // pid undefined / 非有限数 → undefined
+  assert.equal(memoryForPid(undefined, metrics), undefined);
+  assert.equal(memoryForPid(Number.NaN, metrics), undefined);
+  // 未命中 → undefined
+  assert.equal(memoryForPid(9999, metrics), undefined);
+  // 脏条目本身即目标 → undefined,不抛
+  assert.equal(memoryForPid('300', metrics), undefined);
+  assert.equal(memoryForPid(400, metrics), undefined);
+  // metrics 不是数组 / 数组含 null 条目 → undefined 或跳过,整体不抛
+  assert.equal(memoryForPid(100, undefined), undefined);
+  assert.equal(memoryForPid(100, 'junk'), undefined);
+  assert.equal(memoryForPid(100, [null, { pid: 100, memory: { workingSetSize: 20480 } }]), 20); // 20480/1024 = 20
+});
+
 test('validateClickCommand accepts declared ids, rejects unknown ones, ignores non-strings', () => {
   const { validateClickCommand } = load('services/notificationClick.ts');
   // 合法:在声明列表内 → null

@@ -30,6 +30,26 @@ dispatch(ctx: ServiceCtx, service: string, method: string, args: any): Promise<u
 | window | windows.ts | 归属表 + hide/focus 语义，见 [ipc-preload-contracts](./ipc-preload-contracts.md) |
 | process | processSvc.ts | helper 子进程；stdout/stderr 逐行转发并 tee 进 App 日志 |
 
+## appMetrics 内存观测（services/appMetrics.ts）
+
+`memoryForPid(pid, metrics)` 从 `app.getAppMetrics()` 快照按 pid 精确对号 App 的
+utilityProcess 当前内存（MB 四舍五入整数），供两条管理 API 面（controlChannel
+`appToApi` / management `api()`）的 `memoryMB` 字段使用。约定：
+
+- **字段形状以实测为准（Electron 44）**:`ProcessMetric.memory` 是
+  `{ workingSetSize, peakWorkingSetSize, privateBytes }`,**单位 KB**——旧文档的
+  `{ workingSetMB }` 形状在真实返回中不存在;helper 两种形状都收,workingSetSize 按
+  KB→MB 换算。教训:对 Electron API 字段做契约测试前先实测一次真实返回,合成数据会
+  把错误形状测绿。
+- electron-free 纯函数（入参最小结构类型 `ProcessMetricLite`），脏输入（pid 非有限数、
+  缺 memory、working set 非数值）一律跳过或返回 undefined，绝不抛；契约测试 bundle 直跑
+  （同 winBounds 先例）。
+- 快照每请求一次：GET /apps 与 GET /apps/:id 各调一次 `getAppMetrics()` 复用给全部 App；
+  action 类响应（start/stop/enable/favorite/invoke 等）不附快照，缺省由详情页 5s 轮询补。
+- 按 pid 对号不做 process type 过滤：天然排除 Host 自身/渲染/GPU 等一切非本 App 进程；
+  App 用 SDK `process.spawn` 起的 helper 子进程不是 Electron 进程，快照里不可见。
+- 只观测不回收：无内存上限回收、无告警、无历史；UI 仅详情页显示，非运行态显示 —。
+
 ## helper 子进程约定
 
 - 非 TS 入力（Python / PowerShell / 原生程序）一律 helper 进程，stdin/stdout JSON Lines

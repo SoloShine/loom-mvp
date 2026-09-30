@@ -13,6 +13,7 @@ export const mockApps: AppInfo[] = [
     status: "running",
     enabled: true,
     favorite: true,
+    memoryMB: 87,
     lastUsedAt: "2026-09-28 10:12",
     useCount: 46,
     commands: [

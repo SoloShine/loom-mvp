@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import { paths } from "./config";
@@ -12,6 +12,7 @@ import * as windows from "./services/windows";
 import { isTrustedPage, lockControlPage } from "./controlPage";
 import { patchHostSettings } from "./settingsCommit";
 import { describeIdleStop } from "./idleStop";
+import { memoryForPid } from "./services/appMetrics";
 
 let window: BrowserWindow | null = null;
 let updateHotkey: ((next: string, commit: () => void) => void) | null = null;
@@ -27,7 +28,7 @@ function entry(id: string): registry.RegistryEntry {
   if (!found) throw new Error(`NOT_FOUND: 未知 App: ${id}`);
   return found;
 }
-function api(e: registry.RegistryEntry) {
+function api(e: registry.RegistryEntry, metrics?: unknown) {
   if (registry.isBroken(e)) return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [] as string[], commands: [], hotkeys: [], manifestIssues: [], idleStop: describeIdleStop(e, state.settings()) };
   const run = manager.listStatuses()[e.id];
   return {
@@ -36,6 +37,7 @@ function api(e: registry.RegistryEntry) {
     useCount: e.useCount, manifestIssues: e.manifestIssues, commands: e.manifest.commands,
     hotkeys: e.hotkeys, permissions: e.manifest.permissions,
     pid: run?.status === "running" ? run.pid : undefined,
+    memoryMB: run?.status === "running" ? memoryForPid(run.pid, metrics) : undefined,
     idleStop: describeIdleStop(e, state.settings()),
   };
 }
@@ -50,8 +52,14 @@ function page(cursor: unknown, limit: unknown): { cursor: number; limit: number 
 
 export function initManagement(onHotkey: (next: string, commit: () => void) => void): void {
   updateHotkey = onHotkey;
-  guard("mini:management:getApps", () => registry.list().map(api));
-  guard("mini:management:getApp", (raw: unknown) => api(entry(idOf(raw))));
+  guard("mini:management:getApps", () => {
+    const metrics = app.getAppMetrics(); // 每请求一次快照,复用给全部 App
+    return registry.list().map((e) => api(e, metrics));
+  });
+  guard("mini:management:getApp", (raw: unknown) => {
+    const metrics = app.getAppMetrics();
+    return api(entry(idOf(raw)), metrics);
+  });
   guard("mini:management:action", async (raw: unknown, action: unknown) => {
     const id = idOf(raw); const name = String(action); const current = entry(id);
     if (registry.isBroken(current)) throw new Error(`BROKEN_MANIFEST: ${current.error}`);

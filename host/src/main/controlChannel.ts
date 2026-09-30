@@ -11,6 +11,7 @@ import * as history from "./history";
 import { setEnabledAndReconcile } from "./appManagement";
 import * as windows from "./services/windows";
 import { patchHostSettings } from "./settingsCommit";
+import { memoryForPid } from "./services/appMetrics";
 
 /**
  * Local control channel for the `mini` CLI: 127.0.0.1 + random port,
@@ -49,7 +50,17 @@ function readBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
-function appToApi(e: registry.RegistryEntry) {
+/** 惰性取 electron app(照 shutdown 分支的 require 先例,保持模块顶层 electron-free)。 */
+function getElectronApp(): Electron.App | null {
+  try {
+    const { app } = require("electron") as typeof import("electron");
+    return app ?? null;
+  } catch {
+    return null; // 无 electron 环境(如契约测试 bundle):观测缺省,不影响请求本身
+  }
+}
+
+function appToApi(e: registry.RegistryEntry, metrics?: unknown) {
   if (registry.isBroken(e)) {
     return { id: e.id, name: e.id, path: e.dir, status: "broken", enabled: false, favorite: false, error: e.error, permissions: [], commands: [], hotkeys: [], manifestIssues: [], idleStop: describeIdleStop(e, state.settings()) };
   }
@@ -68,6 +79,7 @@ function appToApi(e: registry.RegistryEntry) {
     status: run,
     startedAt: run === "running" ? runInfo?.startedAt : undefined,
     pid: run === "running" ? runInfo?.pid : undefined,
+    memoryMB: run === "running" ? memoryForPid(runInfo?.pid, metrics) : undefined,
     manifestIssues: e.manifestIssues,
     commands: e.manifest.commands,
     hotkeys: e.hotkeys,
@@ -103,9 +115,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
 
   if (req.method === "GET" && url.pathname === "/apps") {
+    const metrics = getElectronApp()?.getAppMetrics(); // 每请求一次快照,复用给全部 App
     return json(res, 200, {
       ok: true,
-      apps: registry.list().map(appToApi),
+      apps: registry.list().map((e) => appToApi(e, metrics)),
       statuses: manager.listStatuses(),
     });
   }
@@ -140,7 +153,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         entry = registry.list().find((e) => e.id === id);
       }
       if (!entry) return json(res, 404, { ok: false, code: "NOT_FOUND", error: `未知 App: ${id}` });
-      return json(res, 200, { ok: true, app: appToApi(entry) });
+      return json(res, 200, { ok: true, app: appToApi(entry, getElectronApp()?.getAppMetrics()) });
     }
     if (req.method !== "POST") return json(res, 405, { ok: false, code: "INVALID_ARGUMENT", error: "method not allowed" });
     let found = registry.list().find((e) => e.id === id);

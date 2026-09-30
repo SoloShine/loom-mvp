@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/mini-host/backend/platform-services.md", "reason": "host services 清单与 electron-free 纯模块惯例(appMetrics 落点)"}
+{"file": ".trellis/spec/mini-host/backend/quality-guidelines.md", "reason": "错误处理纪律与契约测试边界"}
+{"file": ".trellis/spec/mini-host/frontend/state-management.md", "reason": "详情页 bridge 取数模式,轮询 effect 须遵循的约定"}
+{"file": ".trellis/spec/guides/testing-and-acceptance.md", "reason": "契约测试 bundle 跑法与三条闸门"}
+{"file": "docs/post-mvp-plan.md", "reason": "P2.5 原文:按 pid 对号、只观测不回收"}
