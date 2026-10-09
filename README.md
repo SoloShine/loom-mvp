@@ -131,3 +131,7 @@ App 使用 `mini dev` 热更（main 侧 rebuild + reload，UI 侧可选 Vite HMR
 ## 最重要的一条验收标准
 
 > Coding Agent 从需求到运行结果，除了 OS 必须的权限确认外，不需要操作 Host GUI。
+
+## License
+
+[MIT](LICENSE)
